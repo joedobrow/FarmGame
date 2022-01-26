@@ -12,6 +12,7 @@ app.use(express.static(path.join(__dirname, 'client')));
 
 io.on('connection', (socket) => {
   console.log('a user connected');
+  console.log('socket.id: ' + socket.id);
   handlePlayerConnect(socket);
   socket.on('get_starting_info', function(client_object) {
     io.sockets.emit('starting_info', GAME_STATE);
@@ -23,6 +24,9 @@ io.on('connection', (socket) => {
   socket.on('clear_board', function(client_object) {
     clearBoard();
     io.sockets.emit('game_state_update', GAME_STATE);
+  });
+  socket.on('disconnect', () => {
+    console.log('user ' + socket.id + ' disconnected');
   });
 });
 
@@ -57,7 +61,7 @@ for (let i = 0; i < board_size; i++) {
 }
 
 function updateGameState(x, y) {
-  console.log('x: ' + x + ' y: ' + y)
+  //console.log('x: ' + x + ' y: ' + y)
   if (x != null && y != null && (0 <= x <= board_size) && (0 <= y <= board_size)) {
     let tile = GAME_STATE['board'][y][x];
     GAME_STATE['board'][y][x]['index'] = (tile['index'] + 1) % getTypeAmount(tile['type']);
