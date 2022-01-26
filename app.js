@@ -1,43 +1,17 @@
+// ---------- FARM GAME MAIN SERVER-SIDE JS -----------
+
+
+// Variables
+
+// Node Related
 const express = require('express');
 const path = require('path');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+// ------------------------------------------
 
-//app.get('/', (req, res) => {
-//  res.sendFile(__dirname + '/index.html');
-//});
-
-app.use(express.static(path.join(__dirname, 'client')));
-
-io.on('connection', (socket) => {
-  console.log('a user connected');
-  console.log('socket.id: ' + socket.id);
-  handlePlayerConnect(socket);
-  socket.on('get_starting_info', function(client_object) {
-    io.sockets.emit('starting_info', GAME_STATE);
-  });
-  socket.on('board_action', function(client_object) {
-    updateGameState(client_object.x, client_object.y);
-    io.sockets.emit('game_state_update', GAME_STATE);
-  });
-  socket.on('tool_action', function(client_object) {
-    changeTool(client_object.tool);
-    io.sockets.emit('game_state_update', GAME_STATE);
-  });
-  socket.on('clear_board', function(client_object) {
-    clearBoard();
-    io.sockets.emit('game_state_update', GAME_STATE);
-  });
-  socket.on('disconnect', () => {
-    console.log('user ' + socket.id + ' disconnected');
-  });
-});
-
-http.listen(3000, () => {
-  console.log('listening on *:3000');
-});
-
+// Game State Related
 const PLAYER_IDS = {};
 const board_tiles = 5;
 const board_size = board_tiles * 2 + 1;
@@ -57,11 +31,49 @@ const GAME_STATE = { "board": board,
                      "tools": tools,
                      "resources": [], 
                      "hand": [] };
+// ------------------------------------------
 
-// Should we call this here like this?
-clearBoard();
+// Serve client-side files
+app.use(express.static(path.join(__dirname, 'client')));
+// Do we need to run clearBoardState here ?
 
-function clearBoard() {
+// Connection listeners / actions
+io.on('connection', (socket) => {
+  console.log('a user connected');
+  console.log('socket.id: ' + socket.id);
+  handlePlayerConnect(socket);
+
+  socket.on('get_starting_info', function(client_object) {
+    io.sockets.emit('starting_info', GAME_STATE);
+  });
+
+  socket.on('board_action', function(client_object) {
+    updateGameState(client_object.x, client_object.y);
+    io.sockets.emit('board_state_update', board);
+  });
+
+  socket.on('tool_action', function(client_object) {
+    changeTool(client_object.tool);
+    io.sockets.emit('tool_state_update', tools);
+  });
+
+  socket.on('clear_board', function(client_object) {
+    clearGameState();
+    io.sockets.emit('game_state_update', GAME_STATE);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('user ' + socket.id + ' disconnected');
+  });
+});
+
+http.listen(3000, () => {
+  console.log('listening on *:3000');
+});
+// ----------------------------------------------
+
+// Listener Functions
+function clearGameState() {
   for (let i = 0; i < board_size; i++) {
     const row = []; 
     for (let j = 0; j < board_size; j++) { 
@@ -76,11 +88,9 @@ function clearBoard() {
 }
 
 function updateGameState(x, y) {
-  //console.log('x: ' + x + ' y: ' + y)
   if (x != null && y != null && (0 <= x <= board_size) && (0 <= y <= board_size)) {
     let tile = GAME_STATE['board'][y][x];
     GAME_STATE['board'][y][x]['index'] = (tile['index'] + 1) % getTypeAmount(tile['type']);
-    //console.log(tile);  
   } else {
     console.log('bad x,y for updateGameState');
   }
@@ -127,3 +137,4 @@ function changeTool(toolName) {
 
 function handlePlayerConnect(socket) {
 }
+// -------------------------------------

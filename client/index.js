@@ -1,12 +1,13 @@
+// FARM GAME MAIN CLIENT SIDE JS
+
+// Game Constants
+
+// These are needed by backend as well, todo: have app.js send these at connection.
 const boardCardsWide = 5;
 const boardCardsHigh = 5;
-const cellSize = 90;
-const spaceSize = 30;
-const borderSize = 3;
 const handSize = 9;
-const boardWidth = (boardCardsWide * (cellSize + spaceSize)) + spaceSize;
-const boardHeight = (boardCardsHigh * (cellSize + spaceSize)) + spaceSize;
 
+// Names are used by app.js, but colors are only for client.
 let corners = [{ "name": "empty", "color": "black" },
                { "name": "chickencoop", "color": "goldenrod" },
                { "name": "library", "color": "yellow" },
@@ -27,24 +28,44 @@ let edges =   [{ "name": "empty", "color": "black" },
                { "name": "fence", "color": "saddlebrown" },
                { "name": "canal", "color": "aqua" }];
                
-              
 let toolNames = ["hammer", "wrench", "saw", "shovel", "rooster"];
 
 let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
+// -------------------------------
 
+// These are not needed by backend
+const cellSize = 90;
+const spaceSize = 30;
+const borderSize = 3;
+const boardWidth = (boardCardsWide * (cellSize + spaceSize)) + spaceSize;
+const boardHeight = (boardCardsHigh * (cellSize + spaceSize)) + spaceSize;
+// -------------------------------
+
+// Node Listeners
 window.onload = () => {
   const socket = io();
 
   socket.on('starting_info', gameState => {
-    loadBoard(gameState);
+    loadBoard(gameState['board']);
+    updateToolArea(gameState['tools']);
   });
 
   socket.on('game_state_update', gameState => {
-    loadBoard(gameState);
-    updateToolArea(gameState);
+    loadBoard(gameState['board']);
+    updateToolArea(gameState['tools']);
+  });
+
+  socket.on('board_state_update', boardState => {
+    loadBoard(boardState);
+  });
+
+  socket.on('tool_state_update', tools => {
+    updateToolArea(tools);
   });
 }
+// ------------------------------
 
+// Helper functions
 function createElement(eleClass, id, width, height) {
     let newElement = document.createElement("div");
     newElement.setAttribute("class", eleClass);
@@ -65,23 +86,34 @@ function createTile(eleClass, eleId, x, y, width, height) {
   return newElement;
 }
 
-function loadBoard(gameState) {
-  let newBoard = gameState['board'];
-  for (let i = 0; i < newBoard.length; i++) {
-    let boardCol = newBoard[i];
-    for (let j = 0; j < boardCol.length; j++) {
-      let newIndex = boardCol[j]['index'];
-      updateTile(i, j, newIndex);
+function removeAllChildren(parent) {
+    while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
     }
-  }
-  updateToolArea(gameState);
 }
+// ---------------------------
 
-function updateTile(i, j, newIndex) {
-  let tile = document.getElementById("tile_row" + i + "col" + j);
-  changeTile(tile, newIndex);
+// Game State Functions
+function startGame() {
+    startBoard();
+    removeAllChildren(document.getElementById("toolArea"));
+    createToolArea();
+    removeAllChildren(document.getElementById("hand"));
+    createHand();
+    socket.emit('get_starting_info');
 }
+function doubleCheck() {
+    if (confirm('Are you sure you want to restart the game?')) {
+        clearBoard();
+        startGame();
+    }
+}
+function clearBoard() {
+  socket.emit('clear_board');
+}
+// Game Board Functions
 
+// Game start
 function startBoard() {
     document.getElementById("playArea").style.display = "flex";
     document.getElementById("mainContainer").style.minWidth = (cellSize) * handSize + 150;
@@ -91,14 +123,7 @@ function startBoard() {
     document.getElementById("resourceBar").style.display = "block";
     removeAllChildren(document.getElementById("board"));
     createBoardRows();
-    removeAllChildren(document.getElementById("hand"));
-    createHand();
-    removeAllChildren(document.getElementById("toolArea"));
-    createToolArea();
-    socket.emit('get_starting_info');
 }
-
-// Creates all of the rows on the game board and then populates them with tiles, alternating thin edge rows and thicker cell rows
 function createBoardRows() {
     let firstSpace = createElement("boardSpace", "boardRow0", boardWidth, spaceSize);
     firstSpace.setAttribute("data-row", 0);
@@ -115,7 +140,6 @@ function createBoardRows() {
         fillBoardSpace(newSpace);
     }
 }
-
 function fillBoardSpace(rowElement) {
     let rowNum = rowElement.getAttribute("data-row");
     let firstCorner = createTile("boardCorner", "tile_row" + rowNum + "col0", rowNum, 0, spaceSize, spaceSize);
@@ -131,7 +155,6 @@ function fillBoardSpace(rowElement) {
         rowElement.appendChild(corner);
     }
 }
-
 function fillBoardRow(rowElement) {
     let rowNum = rowElement.getAttribute("data-row");
     let firstEdge = createTile("boardEdge", "tile_row" + rowNum + "col0", rowNum, 0, spaceSize, cellSize);
@@ -147,15 +170,70 @@ function fillBoardRow(rowElement) {
         rowElement.appendChild(edge);
     }
 }
+// ----- End of Game start board functions -----
 
-function createHand() {
-    for (let i = 0; i < handSize; i++) {
-        let newCard = createElement("handCard", "handCard", (cellSize + borderSize), (cellSize + borderSize));
-        newCard.setAttribute("onclick", "changeCell(this)");
-        document.getElementById("hand").appendChild(newCard);
+
+// Takes a gameBoard object from backend and updates board
+function loadBoard(gameBoard) {
+  for (let i = 0; i < gameBoard.length; i++) {
+    let boardCol = gameBoard[i];
+    for (let j = 0; j < boardCol.length; j++) {
+      let newIndex = boardCol[j]['index'];
+      updateTile(i, j, newIndex);
+    }
+  }
+}
+function updateTile(i, j, newIndex) {
+  let tile = document.getElementById("tile_row" + i + "col" + j);
+  changeTile(tile, newIndex);
+}
+function changeTile(tileElement, newIndex) {
+  let type = tileElement.getAttribute("class");
+  if (type == "boardCell") {
+    changeCell(tileElement, newIndex);
+  } else if (type == "boardEdge") {
+    changeEdge(tileElement, newIndex);
+  } else if (type == "boardCorner") {
+    changeCorner(tileElement, newIndex);
+  }
+}
+function changeCell(tileElement, newIndex) {
+    removeAllChildren(tileElement);
+    tileElement.style.backgroundColor = cells[newIndex]['color'];
+    if (newIndex > 0) {
+        let icon = document.createElement("img");
+        icon.setAttribute("src", "./content/icons/" + cells[newIndex]['name'] + ".svg");
+        icon.setAttribute("alt", cells[newIndex]['name']);
+        icon.style.width = cellSize;
+        icon.style.height = cellSize;
+        tileElement.appendChild(icon);
+    }
+}
+function changeEdge(tileElement, newIndex) {
+    tileElement.style.backgroundColor = edges[newIndex]['color'];
+}
+function changeCorner(tileElement, newIndex) {
+    removeAllChildren(tileElement);
+    tileElement.style.backgroundColor = corners[newIndex]['color'];
+    if (newIndex > 0) {
+        let icon = document.createElement("img");
+        icon.setAttribute("src", "./content/icons/" + corners[newIndex]['name'] + ".svg");
+        icon.setAttribute("alt", corners[newIndex]['name']);
+        icon.style.width = spaceSize;
+        icon.style.height = spaceSize;
+        tileElement.appendChild(icon);
     }
 }
 
+// Called when a tile is clicked
+function sendTileChange(cellElement) {
+  socket.emit('board_action', { "x": cellElement.getAttribute('data-col'), "y": cellElement.getAttribute('data-row') });
+}
+// ------------- End of Game Board Functions -----------
+
+// Tool Area Functions
+
+// Initialize
 function createToolArea() {
     let toolArea = document.getElementById("toolArea");
     let title = document.createElement("h3");
@@ -168,19 +246,12 @@ function createToolArea() {
         toolArea.appendChild(newTool);
     }
 }
-
-function updateToolArea(gameState) {
-  let tools = gameState['tools'];
+// Called when backend sends a game state update
+function updateToolArea(tools) {
   for (const tool in tools) {
     changeTool(tool, tools[tool]);
   } 
 }
-
-function sendTool(toolElement) {
-  let toolName = toolElement.getAttribute("id");
-  socket.emit('tool_action', { 'tool': toolName });
-}
-// Takes a string tool name and a 1/0 for active/inactive
 function changeTool(toolName, isActive) {
     let toolElement = document.getElementById(toolName);
     removeAllChildren(toolElement) 
@@ -196,65 +267,24 @@ function changeTool(toolName, isActive) {
         toolElement.style.backgroundColor = "grey";
     }
 }
+// Called when a tool is clicked, emits data to backend
+function sendTool(toolElement) {
+  let toolName = toolElement.getAttribute("id");
+  socket.emit('tool_action', { 'tool': toolName });
+}
+// --------- End of Tool Functions -------------
 
-function removeAllChildren(parent) {
-    while (parent.firstChild) {
-        parent.removeChild(parent.firstChild);
+
+// Hand Functions
+function createHand() {
+    for (let i = 0; i < handSize; i++) {
+        let newCard = createElement("handCard", "handCard", (cellSize + borderSize), (cellSize + borderSize));
+        newCard.setAttribute("onclick", "changeCell(this)");
+        document.getElementById("hand").appendChild(newCard);
     }
 }
+// ---------- End of Hand Functions -------------------------------
 
-function sendTileChange(cellElement) {
-  socket.emit('board_action', { "x": cellElement.getAttribute('data-col'), "y": cellElement.getAttribute('data-row') });
-}
 
-function changeTile(tileElement, newIndex) {
-  let type = tileElement.getAttribute("class");
-  if (type == "boardCell") {
-    changeCell(tileElement, newIndex);
-  } else if (type == "boardEdge") {
-    changeEdge(tileElement, newIndex);
-  } else if (type == "boardCorner") {
-    changeCorner(tileElement, newIndex);
-  }
-}
 
-function changeCell(tileElement, newIndex) {
-    removeAllChildren(tileElement);
-    tileElement.style.backgroundColor = cells[newIndex]['color'];
-    if (newIndex > 0) {
-        let icon = document.createElement("img");
-        icon.setAttribute("src", "./content/icons/" + cells[newIndex]['name'] + ".svg");
-        icon.setAttribute("alt", cells[newIndex]['name']);
-        icon.style.width = cellSize;
-        icon.style.height = cellSize;
-        tileElement.appendChild(icon);
-    }
-}
 
-function changeEdge(tileElement, newIndex) {
-    tileElement.style.backgroundColor = edges[newIndex]['color'];
-}
-
-function changeCorner(tileElement, newIndex) {
-    removeAllChildren(tileElement);
-    tileElement.style.backgroundColor = corners[newIndex]['color'];
-    if (newIndex > 0) {
-        let icon = document.createElement("img");
-        icon.setAttribute("src", "./content/icons/" + corners[newIndex]['name'] + ".svg");
-        icon.setAttribute("alt", corners[newIndex]['name']);
-        icon.style.width = spaceSize;
-        icon.style.height = spaceSize;
-        tileElement.appendChild(icon);
-    }
-}
-
-function doubleCheck() {
-    if (confirm('Are you sure you want to restart the game?')) {
-        clearBoard();
-        startBoard();
-    }
-}
-
-function clearBoard() {
-  socket.emit('clear_board');
-}
