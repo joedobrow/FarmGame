@@ -52,27 +52,18 @@ function createElement(eleClass, id, width, height) {
     return newElement;
 }
 
-function createElement(eleClass, width, height) {
-  let newElement = document.createElement("div");
-  newElement.setAttribute("class", eleClass);
-  newElement.style.width = width;
-  newElement.style.height = height;
-  return newElement;
-}
-
 function createTile(eleClass, eleId, x, y, width, height) {
   let newElement = document.createElement("div");
   newElement.setAttribute("class", eleClass);
   newElement.setAttribute("id", eleId);
-  newElement.setAttribute("data-row", y);
-  newElement.setAttribute("data-col", x);
+  newElement.setAttribute("data-row", x);
+  newElement.setAttribute("data-col", y);
   newElement.style.width = width;
   newElement.style.height = height;
   return newElement;
 }
 
 function loadBoard(gameState) {
-  console.log(gameState['board']);
   let newBoard = gameState['board'];
   for (let i = 0; i < newBoard.length; i++) {
     let boardCol = newBoard[i];
@@ -106,16 +97,16 @@ function startBoard() {
 
 // Creates all of the rows on the game board and then populates them with tiles, alternating thin edge rows and thicker cell rows
 function createBoardRows() {
-    let firstSpace = createElement("boardSpace", boardWidth, spaceSize);
+    let firstSpace = createElement("boardSpace", "boardRow0", boardWidth, spaceSize);
     firstSpace.setAttribute("data-row", 0);
     document.getElementById("board").appendChild(firstSpace);
     fillBoardSpace(firstSpace);
     for (let i = 0; i < boardCardsHigh * 2; i += 2) {
-        let newRow = createElement("boardRow", boardWidth, cellSize);
+        let newRow = createElement("boardRow", "boardRow" + (i + 1), boardWidth, cellSize);
         newRow.setAttribute("data-row", i + 1);
         document.getElementById("board").appendChild(newRow);
         fillBoardRow(newRow);
-        let newSpace = createElement("boardSpace", boardWidth, spaceSize);
+        let newSpace = createElement("boardSpace", "boardRow" + (i + 2), boardWidth, spaceSize);
         newSpace.setAttribute("data-row", i + 2);
         document.getElementById("board").appendChild(newSpace);
         fillBoardSpace(newSpace);
@@ -228,6 +219,11 @@ function changeCorner(tileElement, newIndex) {
 
 function doubleCheck() {
     if (confirm('Are you sure you want to restart the game?')) {
+        clearBoard();
         startBoard();
     }
+}
+
+function clearBoard() {
+  socket.emit('clear_board');
 }

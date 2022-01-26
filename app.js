@@ -1,5 +1,5 @@
 const express = require('express');
-var path = require('path');
+const path = require('path');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
@@ -18,7 +18,11 @@ io.on('connection', (socket) => {
   });
   socket.on('board_action', function(client_object) {
     updateGameState(client_object.x, client_object.y);
-    io.sockets.emit("game_state_update", GAME_STATE);
+    io.sockets.emit('game_state_update', GAME_STATE);
+  });
+  socket.on('clear_board', function(client_object) {
+    clearBoard();
+    io.sockets.emit('game_state_update', GAME_STATE);
   });
 });
 
@@ -27,25 +31,36 @@ http.listen(3000, () => {
 });
 
 const PLAYER_IDS = {};
-
 const board_tiles = 5;
 const board_size = board_tiles * 2 + 1;
 const board = [];
-for (var i = 0; i < board_size; i++) {
-  const row = [];
-  for (var j = 0; j < board_size; j++) {
+for (let i = 0; i < board_size; i++) {
+  const row = []; 
+  for (let j = 0; j < board_size; j++) { 
     row.push({ "index": 0, "player": -1, "type": getTileType(i, j)});
   }
   board.push(row);
 }
-
 const GAME_STATE = { "board": board, "resources": [], "hand": [] };
+
+clearBoard();
+
+function clearBoard() {
+for (let i = 0; i < board_size; i++) {
+    const row = []; 
+    for (let j = 0; j < board_size; j++) { 
+      board[i][j]['index'] = 0;
+      board[i][j]['player'] = -1;
+      board[i][j]['type'] = getTileType(i, j);
+    }
+  }
+}
 
 function updateGameState(x, y) {
   console.log('x: ' + x + ' y: ' + y)
   if (x != null && y != null && (0 <= x <= board_size) && (0 <= y <= board_size)) {
-    let tile = GAME_STATE['board'][x][y];
-    GAME_STATE['board'][x][y]['index'] = (tile['index'] + 1) % getTypeAmount(tile['type']);
+    let tile = GAME_STATE['board'][y][x];
+    GAME_STATE['board'][y][x]['index'] = (tile['index'] + 1) % getTypeAmount(tile['type']);
     //console.log(tile);  
   } else {
     console.log('bad x,y for updateGameState');
@@ -88,5 +103,4 @@ function getTileName(type, index) {
 }
 
 function handlePlayerConnect(socket) {
-  console.log('fucku');
 }
