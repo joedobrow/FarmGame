@@ -33,6 +33,31 @@ const GAME_STATE = { "board": board,
                      "hand": [] };
 // ------------------------------------------
 
+// Draft State Related
+const packSize = 9;
+let numPlayers = 4; // Need to be able to adjust this.
+const PACK_STATE = {};
+for (let i = 0; i < numPlayers; i++) {
+  PACK_STATE['player' + i] = {};
+  for (let j = 0; j < packSize; j++) {
+    PACK_STATE['player' + i]['pack' + j] = [];
+  }
+}
+const gameCards = { 'wood': 25,
+                    'stone': 25,
+                    'sheep': 25,
+                    'hen': 25,
+                    'squash': 25,
+                    'bean': 25,
+                    'corn': 25,
+                    'hammer': 1,
+                    'wrench': 1,
+                    'saw': 1,
+                    'shovel': 1,
+                    'rooster': 1 };
+let gameDeck = [];
+// --------------------------------------
+
 // Serve client-side files
 app.use(express.static(path.join(__dirname, 'client')));
 // Do we need to run clearBoardState here ?
@@ -138,3 +163,31 @@ function changeTool(toolName) {
 function handlePlayerConnect(socket) {
 }
 // -------------------------------------
+
+// Draft functions
+function buildDeck() {
+  let newDeck = [];
+  for (card in gameCards) {
+    for (let i = 0; i < gameCards[card]; i++) {
+      newDeck.push(card);
+    }
+  }
+  gameDeck = knuthShuffle(newDeck);
+  console.log(gameDeck);
+}
+
+function buildPacks() {
+   
+}
+
+// https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
+function knuthShuffle(array) {
+  let currentIndex = array.length,  randomIndex;
+  while (currentIndex != 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+  return array;
+}
