@@ -28,8 +28,9 @@ let edges =   [{ "name": "empty", "color": "black" },
                { "name": "canal", "color": "aqua" }];
                
               
-let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
+let toolNames = ["hammer", "wrench", "saw", "shovel", "rooster"];
 
+let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
 
 window.onload = () => {
   const socket = io();
@@ -40,6 +41,7 @@ window.onload = () => {
 
   socket.on('game_state_update', gameState => {
     loadBoard(gameState);
+    updateToolArea(gameState);
   });
 }
 
@@ -72,6 +74,7 @@ function loadBoard(gameState) {
       updateTile(i, j, newIndex);
     }
   }
+  updateToolArea(gameState);
 }
 
 function updateTile(i, j, newIndex) {
@@ -159,11 +162,39 @@ function createToolArea() {
     title.setAttribute("class", "toolTitle");
     title.innerText = "Tools";
     toolArea.appendChild(title);
-    toolArea.appendChild(createElement("tool", "hammer", (cellSize + borderSize), (cellSize + borderSize)));
-    toolArea.appendChild(createElement("tool", "wrench", (cellSize + borderSize), (cellSize + borderSize)));
-    toolArea.appendChild(createElement("tool", "saw", (cellSize + borderSize), (cellSize + borderSize)));
-    toolArea.appendChild(createElement("tool", "shovel", (cellSize + borderSize), (cellSize + borderSize)));
-    toolArea.appendChild(createElement("tool", "rooster", (cellSize + borderSize), (cellSize + borderSize)));
+    for (let i = 0; i < toolNames.length; i++) {
+        let newTool = createElement("tool", toolNames[i], (cellSize + borderSize), (cellSize + borderSize));
+        newTool.setAttribute("onclick", "sendTool(this);");
+        toolArea.appendChild(newTool);
+    }
+}
+
+function updateToolArea(gameState) {
+  let tools = gameState['tools'];
+  for (const tool in tools) {
+    changeTool(tool, tools[tool]);
+  } 
+}
+
+function sendTool(toolElement) {
+  let toolName = toolElement.getAttribute("id");
+  socket.emit('tool_action', { 'tool': toolName });
+}
+// Takes a string tool name and a 1/0 for active/inactive
+function changeTool(toolName, isActive) {
+    let toolElement = document.getElementById(toolName);
+    removeAllChildren(toolElement) 
+    if (isActive) {
+        let icon = document.createElement("img");
+        icon.setAttribute("src", "./content/icons/" + toolElement.getAttribute("id") + ".svg");
+        icon.setAttribute("alt", toolElement.getAttribute("id"));
+        icon.style.width = cellSize;
+        icon.style.height = cellSize;
+        toolElement.appendChild(icon);
+        toolElement.style.backgroundColor = "Gainsboro";
+    } else {
+        toolElement.style.backgroundColor = "grey";
+    }
 }
 
 function removeAllChildren(parent) {

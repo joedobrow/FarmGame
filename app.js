@@ -21,6 +21,10 @@ io.on('connection', (socket) => {
     updateGameState(client_object.x, client_object.y);
     io.sockets.emit('game_state_update', GAME_STATE);
   });
+  socket.on('tool_action', function(client_object) {
+    changeTool(client_object.tool);
+    io.sockets.emit('game_state_update', GAME_STATE);
+  });
   socket.on('clear_board', function(client_object) {
     clearBoard();
     io.sockets.emit('game_state_update', GAME_STATE);
@@ -45,18 +49,29 @@ for (let i = 0; i < board_size; i++) {
   }
   board.push(row);
 }
-const GAME_STATE = { "board": board, "resources": [], "hand": [] };
+const tools = {'hammer': 0, 'wrench': 0, 'saw': 0, 'shovel': 0, 'rooster': 0 };
+for (let i = 0; i < tools.length; i++) {
+  tools.push(0);
+}
+const GAME_STATE = { "board": board, 
+                     "tools": tools,
+                     "resources": [], 
+                     "hand": [] };
 
+// Should we call this here like this?
 clearBoard();
 
 function clearBoard() {
-for (let i = 0; i < board_size; i++) {
+  for (let i = 0; i < board_size; i++) {
     const row = []; 
     for (let j = 0; j < board_size; j++) { 
       board[i][j]['index'] = 0;
       board[i][j]['player'] = -1;
       board[i][j]['type'] = getTileType(i, j);
     }
+  }
+  for (const tool in GAME_STATE['tools']) {
+    GAME_STATE['tools'][tool] = 0;
   }
 }
 
@@ -104,6 +119,10 @@ function getTileName(type, index) {
   } else {
     return null;
   }
+}
+
+function changeTool(toolName) {
+  GAME_STATE['tools'][toolName] = (GAME_STATE['tools'][toolName] + 1) % 2;
 }
 
 function handlePlayerConnect(socket) {
