@@ -7,27 +7,88 @@ const handSize = 9;
 const boardWidth = (boardCardsWide * (cellSize + spaceSize)) + spaceSize;
 const boardHeight = (boardCardsHigh * (cellSize + spaceSize)) + spaceSize;
 
-let structures = ["none", "chickencoop", "library", "loom", "outhouse", "slaughterhouse", "tractor", "well"];
-let tiles = ["none", "sheep", "hen", "squash", "bean", "corn"];
+let corners = [{ "name": "empty", "color": "black" },
+               { "name": "chickencoop", "color": "goldenrod" },
+               { "name": "library", "color": "yellow" },
+               { "name": "loom", "color": "lightpink" },
+               { "name": "outhouse", "color": "rosybrown" },
+               { "name": "slaughterhouse", "color": "tomato" },
+               { "name": "tractor", "color": "yellowgreen" },
+               { "name": "well", "color": "aqua" }];
+
+let cells =   [{ "name": "empty", "color": "grey" }, 
+               { "name": "sheep", "color": "white" },
+               { "name": "hen", "color": "goldenrod" },
+               { "name": "squash", "color": "olivedrab" },
+               { "name": "bean", "color": "burlywood" },
+               { "name": "corn", "color": "gold" }];
+
+let edges =   [{ "name": "empty", "color": "black" },
+               { "name": "fence", "color": "saddlebrown" },
+               { "name": "canal", "color": "aqua" }];
+               
+              
 let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
+
 
 window.onload = () => {
   const socket = io();
 
-  socket.on('starting_info', gameState) => {
+  socket.on('starting_info', gameState => {
     loadBoard(gameState);
-  };
+  });
 
-  socket.on('game_state_update', gameState) => {
+  socket.on('game_state_update', gameState => {
     loadBoard(gameState);
-  };
+  });
+}
+
+function createElement(eleClass, id, width, height) {
+    let newElement = document.createElement("div");
+    newElement.setAttribute("class", eleClass);
+    newElement.setAttribute("id", id);
+    newElement.style.width = width;
+    newElement.style.height = height;
+    return newElement;
+}
+
+function createElement(eleClass, width, height) {
+  let newElement = document.createElement("div");
+  newElement.setAttribute("class", eleClass);
+  newElement.style.width = width;
+  newElement.style.height = height;
+  return newElement;
+}
+
+function createTile(eleClass, eleId, x, y, width, height) {
+  let newElement = document.createElement("div");
+  newElement.setAttribute("class", eleClass);
+  newElement.setAttribute("id", eleId);
+  newElement.setAttribute("data-row", y);
+  newElement.setAttribute("data-col", x);
+  newElement.style.width = width;
+  newElement.style.height = height;
+  return newElement;
 }
 
 function loadBoard(gameState) {
-  
+  console.log(gameState['board']);
+  let newBoard = gameState['board'];
+  for (let i = 0; i < newBoard.length; i++) {
+    let boardCol = newBoard[i];
+    for (let j = 0; j < boardCol.length; j++) {
+      let newIndex = boardCol[j]['index'];
+      updateTile(i, j, newIndex);
+    }
+  }
 }
 
-function loadBoard() {
+function updateTile(i, j, newIndex) {
+  let tile = document.getElementById("tile_row" + i + "col" + j);
+  changeTile(tile, newIndex);
+}
+
+function startBoard() {
     document.getElementById("playArea").style.display = "flex";
     document.getElementById("mainContainer").style.minWidth = (cellSize) * handSize + 150;
     document.getElementById("loadButton").style.display = "none";
@@ -40,48 +101,55 @@ function loadBoard() {
     createHand();
     removeAllChildren(document.getElementById("toolArea"));
     createToolArea();
+    socket.emit('get_starting_info');
 }
 
+// Creates all of the rows on the game board and then populates them with tiles, alternating thin edge rows and thicker cell rows
 function createBoardRows() {
-    let firstSpace = createElement("boardSpace", "space0", boardWidth, spaceSize);
+    let firstSpace = createElement("boardSpace", boardWidth, spaceSize);
+    firstSpace.setAttribute("data-row", 0);
     document.getElementById("board").appendChild(firstSpace);
     fillBoardSpace(firstSpace);
-    for (let i = 0; i < boardCardsHigh; i++) {
-        let newRow = createElement("boardRow", i, boardWidth, cellSize);
+    for (let i = 0; i < boardCardsHigh * 2; i += 2) {
+        let newRow = createElement("boardRow", boardWidth, cellSize);
+        newRow.setAttribute("data-row", i + 1);
         document.getElementById("board").appendChild(newRow);
         fillBoardRow(newRow);
-        let newSpace = createElement("boardSpace", (i + 1), boardWidth, spaceSize);
+        let newSpace = createElement("boardSpace", boardWidth, spaceSize);
+        newSpace.setAttribute("data-row", i + 2);
         document.getElementById("board").appendChild(newSpace);
         fillBoardSpace(newSpace);
     }
 }
 
 function fillBoardSpace(rowElement) {
-    let firstCorner = createElement("boardCorner", 0, 0, spaceSize, spaceSize);
-    firstCorner.setAttribute("onclick", "changeTile(this)");
+    let rowNum = rowElement.getAttribute("data-row");
+    let firstCorner = createTile("boardCorner", "tile_row" + rowNum + "col0", rowNum, 0, spaceSize, spaceSize);
+    firstCorner.setAttribute("onclick", "sendTileChange(this)");
     rowElement.appendChild(firstCorner)
-    for (let i = 0; i < boardCardsWide; i++) { // alternate making edges and corners
-        let edge = createElement("boardEdge", rowElement.id, (i + 1), cellSize, spaceSize);
-        edge.setAttribute("onclick", "changeTile(this)");
+    for (let i = 0; i < boardCardsWide * 2; i += 2) { // alternate making edges and corners
+        let edge = createTile("boardEdge", "tile_row" + rowNum + "col" + (i + 1), rowNum, (i + 1), cellSize, spaceSize);
+        edge.setAttribute("onclick", "sendTileChange(this)");
         rowElement.appendChild(edge);
 
-        let corner = createElement("boardCorner", rowElement.id, (i + 1), spaceSize, spaceSize);
-        corner.setAttribute("onclick", "changeTile(this)");
+        let corner = createTile("boardCorner", "tile_row" + rowNum + "col" + (i + 2), rowNum, (i + 2), spaceSize, spaceSize);
+        corner.setAttribute("onclick", "sendTileChange(this)");
         rowElement.appendChild(corner);
     }
 }
 
 function fillBoardRow(rowElement) {
-    let firstEdge = createElement("boardEdge", rowElement.id, 0, spaceSize, cellSize);
-    firstEdge.setAttribute("onclick", "changeTile(this)");
+    let rowNum = rowElement.getAttribute("data-row");
+    let firstEdge = createTile("boardEdge", "tile_row" + rowNum + "col0", rowNum, 0, spaceSize, cellSize);
+    firstEdge.setAttribute("onclick", "sendTileChange(this)");
     rowElement.appendChild(firstEdge)
-    for (let i = 0; i < boardCardsWide; i++) { // alternate making cells and edges
-        let cell = createElement("boardCell", rowElement.id, (i + 1), cellSize, cellSize);
-        cell.setAttribute("onclick", "changeTile(this);");
+    for (let i = 0; i < boardCardsWide * 2; i+= 2) { // alternate making cells and edges
+        let cell = createTile("boardCell", "tile_row" + rowNum + "col" + (i + 1), rowNum, (i + 1), cellSize, cellSize);
+        cell.setAttribute("onclick", "sendTileChange(this);");
         rowElement.appendChild(cell);
         
-        let edge = createElement("boardEdge", rowElement.id, (i + 1), spaceSize, cellSize);
-        edge.setAttribute("onclick", "changeTile(this)")
+        let edge = createTile("boardEdge", "tile_row" + rowNum + "col" + (i + 2), rowNum, (i + 2), spaceSize, cellSize);
+        edge.setAttribute("onclick", "sendTileChange(this)")
         rowElement.appendChild(edge);
     }
 }
@@ -107,105 +175,59 @@ function createToolArea() {
     toolArea.appendChild(createElement("tool", "rooster", (cellSize + borderSize), (cellSize + borderSize)));
 }
 
-function createElement(eleClass, id, width, height) {
-    let newElement = document.createElement("div");
-    newElement.setAttribute("class", eleClass);
-    newElement.setAttribute("id", id);
-    newElement.style.width = width;
-    newElement.style.height = height;
-    return newElement;
-}
-
-function createTile(eleClass, x, y, width, height) {
-  let newElement = document.createElement("div");
-  newElement.setAttribute("class", eleClass);
-  newElement.setAttribute("data-row", y);
-  newElement.setAttribute("data-col", x);
-  newElement.style.width = width;
-  newElement.style.height = height;
-  return newElement;
-}
-
 function removeAllChildren(parent) {
     while (parent.firstChild) {
         parent.removeChild(parent.firstChild);
     }
 }
 
-//generalized change tile function here
-function changeTile(cellElement) {
-// use div attributes data-col and data-row to track col and row
+function sendTileChange(cellElement) {
   socket.emit('board_action', { "x": cellElement.getAttribute('data-col'), "y": cellElement.getAttribute('data-row') });
 }
 
+function changeTile(tileElement, newIndex) {
+  let type = tileElement.getAttribute("class");
+  if (type == "boardCell") {
+    changeCell(tileElement, newIndex);
+  } else if (type == "boardEdge") {
+    changeEdge(tileElement, newIndex);
+  } else if (type == "boardCorner") {
+    changeCorner(tileElement, newIndex);
+  }
+}
 
-function changeCell(cellElement) {
-    removeAllChildren(cellElement);
-    let colors = ["grey", "white", "goldenrod", "olivedrab", "burlywood", "gold"];
-    let newIndex = 0;
-    for (let i = 0; i < colors.length; i++) {
-        if (cellElement.style.backgroundColor == colors[i] || cellElement.style.backgroundColor == "") {
-            if (i == colors.length - 1) {
-                newIndex = -1;
-            }
-            cellElement.style.backgroundColor = colors[newIndex + 1];
-            if (newIndex != -1) {
-                let icon = document.createElement("img");
-                icon.setAttribute("src", "./content/icons/" + tiles[newIndex + 1] + ".svg");
-                icon.setAttribute("onclick", "changeCell(this)");
-                icon.setAttribute("alt", tiles[newIndex - 1]);
-                icon.style.width = cellSize;
-                icon.style.height = cellSize;
-                cellElement.appendChild(icon);
-            }
-            break;
-        }
-        newIndex++;
+function changeCell(tileElement, newIndex) {
+    removeAllChildren(tileElement);
+    tileElement.style.backgroundColor = cells[newIndex]['color'];
+    if (newIndex > 0) {
+        let icon = document.createElement("img");
+        icon.setAttribute("src", "./content/icons/" + cells[newIndex]['name'] + ".svg");
+        icon.setAttribute("alt", cells[newIndex]['name']);
+        icon.style.width = cellSize;
+        icon.style.height = cellSize;
+        tileElement.appendChild(icon);
     }
 }
 
-function changeEdge(cellElement) {
-    let colors = ["black", "saddlebrown", "aqua"];
-    let newIndex = 0;
-    for (let i = 0; i < colors.length; i++) {
-        if (cellElement.style.backgroundColor == colors[i] || cellElement.style.backgroundColor == "") {
-            if (i == colors.length - 1) {
-                newIndex = -1;
-            }
-            cellElement.style.backgroundColor = colors[newIndex + 1];
-            break;
-        }
-        newIndex++;
-    }
+function changeEdge(tileElement, newIndex) {
+    tileElement.style.backgroundColor = edges[newIndex]['color'];
 }
 
-function changeCorner(cellElement) {
-    removeAllChildren(cellElement);
-    let colors = ["grey", "goldenrod", "yellow", "lightpink", "rosybrown", "tomato", "yellowgreen", "aqua"];
-    let newIndex = 0;
-    for (let i = 0; i < colors.length; i++) {
-        if (cellElement.style.backgroundColor == colors[i] || cellElement.style.backgroundColor == "") {
-            if (i == colors.length - 1) {
-                newIndex = -1;
-            }
-            if (newIndex != -1) {
-                let icon = document.createElement("img");
-                icon.setAttribute("src", "./content/icons/" + structures[newIndex + 1] + ".svg");
-                icon.setAttribute("onclick", "changeCorner(this)");
-                icon.setAttribute("alt", structures[newIndex - 1]);
-                icon.style.width = spaceSize;
-                icon.style.height = spaceSize;
-                cellElement.appendChild(icon);
-            }
-            cellElement.style.backgroundColor = colors[newIndex + 1];
-            break;
-        }
-        newIndex++;
+function changeCorner(tileElement, newIndex) {
+    removeAllChildren(tileElement);
+    tileElement.style.backgroundColor = corners[newIndex]['color'];
+    if (newIndex > 0) {
+        let icon = document.createElement("img");
+        icon.setAttribute("src", "./content/icons/" + corners[newIndex]['name'] + ".svg");
+        icon.setAttribute("alt", corners[newIndex]['name']);
+        icon.style.width = spaceSize;
+        icon.style.height = spaceSize;
+        tileElement.appendChild(icon);
     }
 }
 
 function doubleCheck() {
     if (confirm('Are you sure you want to restart the game?')) {
-        loadBoard();
+        startBoard();
     }
 }

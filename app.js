@@ -13,7 +13,9 @@ app.use(express.static(path.join(__dirname, 'client')));
 io.on('connection', (socket) => {
   console.log('a user connected');
   handlePlayerConnect(socket);
-  socket.emit('starting_info', GAME_STATE);
+  socket.on('get_starting_info', function(client_object) {
+    io.sockets.emit('starting_info', GAME_STATE);
+  });
   socket.on('board_action', function(client_object) {
     updateGameState(client_object.x, client_object.y);
     io.sockets.emit("game_state_update", GAME_STATE);
@@ -40,17 +42,21 @@ for (var i = 0; i < board_size; i++) {
 const GAME_STATE = { "board": board, "resources": [], "hand": [] };
 
 function updateGameState(x, y) {
-  let tile = GAME_STATE.board[x][y];
-  GAME_STATE.board[x][y].index = (tile.index + 1) % getTypeAmount(tile.type);
-  console.log(GAME_STATE);
-  
+  console.log('x: ' + x + ' y: ' + y)
+  if (x != null && y != null && (0 <= x <= board_size) && (0 <= y <= board_size)) {
+    let tile = GAME_STATE['board'][x][y];
+    GAME_STATE['board'][x][y]['index'] = (tile['index'] + 1) % getTypeAmount(tile['type']);
+    //console.log(tile);  
+  } else {
+    console.log('bad x,y for updateGameState');
+  }
 }
 
 function getTileType(x, y) {
   if (x%2 == 0 && y%2 == 0) {
     return "corner";
   }
-  if (x%2 == 1 && y%2 == 0) {
+  if (x%2 == 1 && y%2 == 1) {
     return "cell";
   }
   return "edge";
@@ -59,7 +65,7 @@ function getTileType(x, y) {
 function getTypeAmount(type) {
   if (type == "corner") {
     return 8;
-  } else if (type == "face") {
+  } else if (type == "cell") {
     return 6;
   } else if (type == "edge") {
     return 3;
