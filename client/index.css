@@ -84,7 +84,35 @@
     display:none;
     padding:30px;
     border-bottom: 6px solid black;
-    justify-content:space-evenly
+    justify-content:space-evenly;
+}
+#draftArea {
+    display:none;
+    padding: 30px;
+    border-bottom: 6px solid black;
+    text-align: center;
+}
+#draftBoard {
+    padding: 30px;
+    border: 3px solid black;
+    display: flex;
+    flex-wrap: wrap;
+    margin-right:100px;
+    margin-left:100px;
+}
+.draftCard {
+    border: 3px solid black;
+    width: 150px;
+    height: 150px;
+    background-color: grey;
+    margin:20px;
+    justify-content: space-evenly;
+}
+#draftButton {
+    display: none;
+}
+#lineBreak {
+    width:100% !important;
 }
 #toolArea {
     max-width:300px;
@@ -98,4 +126,7 @@
     background: grey;
     margin:10px;
     border: 3px solid black;
+}
+#showPlayAreaButton {
+    display: none;
 }

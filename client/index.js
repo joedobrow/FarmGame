@@ -100,16 +100,29 @@ function startGame() {
     createToolArea();
     removeAllChildren(document.getElementById("hand"));
     createHand();
+    document.getElementById("draftButton").style.display = "block";
     socket.emit('get_starting_info');
 }
 function doubleCheck() {
     if (confirm('Are you sure you want to restart the game?')) {
-        clearBoard();
+        sendClearBoard();
         startGame();
     }
 }
-function clearBoard() {
+function sendClearBoard() {
   socket.emit('clear_board');
+}
+function startDraft() {
+  document.getElementById("playArea").style.display = "none";
+  document.getElementById("showPlayAreaButton").style.display = "block";
+  document.getElementById("draftButton").style.display = "none";
+  document.getElementById("draftArea").style.display = "block";
+  buildDraftArea();
+}
+function showPlayArea() {
+  document.getElementById("playArea").style.display = "flex";
+  document.getElementById("showPlayAreaButton").style.display = "none";
+  document.getElementById("draftButton").style.display = "block";
 }
 // Game Board Functions
 
@@ -285,6 +298,15 @@ function createHand() {
 }
 // ---------- End of Hand Functions -------------------------------
 
-
-
+// Draft Area Functions
+function buildDraftArea() {
+  let draftBoard = document.getElementById("draftBoard");
+  removeAllChildren(draftBoard);
+  for (let i = 0; i < handSize; i++) {
+    let newCard = document.createElement("div");
+    newCard.setAttribute("class", "draftCard");
+    draftBoard.appendChild(newCard);
+  }
+}
+    
 

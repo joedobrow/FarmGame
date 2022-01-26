@@ -10,9 +10,10 @@
             <h1>Farm Game</h1>
         </div>
         <div class="buttonBar"> 
-            <button id="loadButton" onclick="startGame();">Load Board</button>
+            <button id="loadButton" onclick="startGame();">Start Game</button>
             <button id="resetButton" onclick="doubleCheck()">Reset</button>
-            <button>Draft</button>
+            <button id="draftButton" onclick="startDraft()">Draft</button>
+            <button id="showPlayAreaButton" onclick="showPlayArea()">Show Play Area</button>
             <a href="https://docs.google.com/document/d/1OBxjJlyyQvFg2gTMHMHFpcEGV4zrtDcFaM-0nUTQyYk/edit?usp=sharing" target="_blank">
                 <button>
                     Rules
@@ -28,6 +29,13 @@
         </div>
         <div id="homeIcon">
             <img id="homeIconImg" src="./content/icons/sheep.svg" onclick="startGame()"></img>
+        </div>
+        <div id="draftArea">
+          <h3 id="draftTitle">Draft Area</h3>
+          <div class="lineBreak">
+          </div>
+          <div id="draftBoard">
+          </div>
         </div>
         <div class="resourceBar" id="resourceBar">
             <span>Coin:<input></span>
