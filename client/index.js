@@ -11,6 +11,22 @@ let structures = ["none", "chickencoop", "library", "loom", "outhouse", "slaught
 let tiles = ["none", "sheep", "hen", "squash", "bean", "corn"];
 let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
 
+window.onload = () => {
+  const socket = io();
+
+  socket.on('starting_info', gameState) => {
+    loadBoard(gameState);
+  };
+
+  socket.on('game_state_update', gameState) => {
+    loadBoard(gameState);
+  };
+}
+
+function loadBoard(gameState) {
+  
+}
+
 function loadBoard() {
     document.getElementById("playArea").style.display = "flex";
     document.getElementById("mainContainer").style.minWidth = (cellSize) * handSize + 150;
@@ -31,41 +47,41 @@ function createBoardRows() {
     document.getElementById("board").appendChild(firstSpace);
     fillBoardSpace(firstSpace);
     for (let i = 0; i < boardCardsHigh; i++) {
-        let newRow = createElement("boardRow", "row" + i, boardWidth, cellSize);
+        let newRow = createElement("boardRow", i, boardWidth, cellSize);
         document.getElementById("board").appendChild(newRow);
         fillBoardRow(newRow);
-        let newSpace = createElement("boardSpace", "space" + (i + 1), boardWidth, spaceSize);
+        let newSpace = createElement("boardSpace", (i + 1), boardWidth, spaceSize);
         document.getElementById("board").appendChild(newSpace);
         fillBoardSpace(newSpace);
     }
 }
 
 function fillBoardSpace(rowElement) {
-    let firstCorner = createElement("boardCorner", "corner_row0col0", spaceSize, spaceSize);
-    firstCorner.setAttribute("onclick", "changeCorner(this)");
+    let firstCorner = createElement("boardCorner", 0, 0, spaceSize, spaceSize);
+    firstCorner.setAttribute("onclick", "changeTile(this)");
     rowElement.appendChild(firstCorner)
     for (let i = 0; i < boardCardsWide; i++) { // alternate making edges and corners
-        let edge = createElement("boardEdge", "edge_" + rowElement.id + "col" + (i + 1), cellSize, spaceSize);
-        edge.setAttribute("onclick", "changeEdge(this)");
+        let edge = createElement("boardEdge", rowElement.id, (i + 1), cellSize, spaceSize);
+        edge.setAttribute("onclick", "changeTile(this)");
         rowElement.appendChild(edge);
 
-        let corner = createElement("boardCorner", "corner_" + rowElement.id + "col" + (i + 1), spaceSize, spaceSize);
-        corner.setAttribute("onclick", "changeCorner(this)");
+        let corner = createElement("boardCorner", rowElement.id, (i + 1), spaceSize, spaceSize);
+        corner.setAttribute("onclick", "changeTile(this)");
         rowElement.appendChild(corner);
     }
 }
 
 function fillBoardRow(rowElement) {
-    let firstEdge = createElement("boardEdge", "edge_" + rowElement.id + "col0", spaceSize, cellSize);
-    firstEdge.setAttribute("onclick", "changeEdge(this)");
+    let firstEdge = createElement("boardEdge", rowElement.id, 0, spaceSize, cellSize);
+    firstEdge.setAttribute("onclick", "changeTile(this)");
     rowElement.appendChild(firstEdge)
     for (let i = 0; i < boardCardsWide; i++) { // alternate making cells and edges
-        let cell = createElement("boardCell", rowElement.id + "col" + (i + 1), cellSize, cellSize);
-        cell.setAttribute("onclick", "changeCell(this);");
+        let cell = createElement("boardCell", rowElement.id, (i + 1), cellSize, cellSize);
+        cell.setAttribute("onclick", "changeTile(this);");
         rowElement.appendChild(cell);
         
-        let edge = createElement("boardEdge", "edge_" + rowElement.id + "col" + (i + 1), spaceSize, cellSize);
-        edge.setAttribute("onclick", "changeEdge(this)")
+        let edge = createElement("boardEdge", rowElement.id, (i + 1), spaceSize, cellSize);
+        edge.setAttribute("onclick", "changeTile(this)")
         rowElement.appendChild(edge);
     }
 }
@@ -100,11 +116,28 @@ function createElement(eleClass, id, width, height) {
     return newElement;
 }
 
+function createTile(eleClass, x, y, width, height) {
+  let newElement = document.createElement("div");
+  newElement.setAttribute("class", eleClass);
+  newElement.setAttribute("data-row", y);
+  newElement.setAttribute("data-col", x);
+  newElement.style.width = width;
+  newElement.style.height = height;
+  return newElement;
+}
+
 function removeAllChildren(parent) {
     while (parent.firstChild) {
         parent.removeChild(parent.firstChild);
     }
 }
+
+//generalized change tile function here
+function changeTile(cellElement) {
+// use div attributes data-col and data-row to track col and row
+  socket.emit('board_action', { "x": cellElement.getAttribute('data-col'), "y": cellElement.getAttribute('data-row') });
+}
+
 
 function changeCell(cellElement) {
     removeAllChildren(cellElement);
