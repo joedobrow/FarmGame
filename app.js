@@ -34,14 +34,14 @@ const GAME_STATE = { "board": board,
 // ------------------------------------------
 
 // Draft State Related
-const packSize = 9;
+const PACK_SIZE = 9;
+const GAME_ROUNDS = 5;
 let numPlayers = 4; // Need to be able to adjust this.
+
+// PACK_STATE = { 'pack1': ['corn', 'corn', 'sheep' ....], 'pack2': [], ... }, 
 const PACK_STATE = {};
-for (let i = 0; i < numPlayers; i++) {
-  PACK_STATE['player' + i] = {};
-  for (let j = 0; j < packSize; j++) {
-    PACK_STATE['player' + i]['pack' + j] = [];
-  }
+for (let i = 0; i < (numPlayers * GAME_ROUNDS); i++) {
+  PACK_STATE['pack' + i] = [];
 }
 const gameCards = { 'wood': 25,
                     'stone': 25,
@@ -165,6 +165,16 @@ function handlePlayerConnect(socket) {
 // -------------------------------------
 
 // Draft functions
+function startDraft() {
+  buildDeck();
+  buildPacks();
+}
+
+function sendPacks() {
+// This will be a function of which pack we're on, which player it is, and which pick of the draft it is
+// When client picks a card, it emits back the index of the pack that was taken, and backend overwrites with "none"
+}
+
 function buildDeck() {
   let newDeck = [];
   for (card in gameCards) {
@@ -173,12 +183,20 @@ function buildDeck() {
     }
   }
   gameDeck = knuthShuffle(newDeck);
-  console.log(gameDeck);
+  //console.log(gameDeck);
 }
 
 function buildPacks() {
-   
+  for (pack in PACK_STATE) {
+    for (let i = 0; i < PACK_SIZE; i++) {
+      PACK_STATE[pack].push(gameDeck.pop()); // pop the last element of the gameDeck into the pack
+    }
+    //console.log(PACK_STATE[pack]);
+  } 
 }
+
+buildDeck();
+buildPacks();
 
 // https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
 function knuthShuffle(array) {
@@ -191,3 +209,4 @@ function knuthShuffle(array) {
   }
   return array;
 }
+// ------- End of Draft Functions ----------------
