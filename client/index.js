@@ -36,6 +36,7 @@ let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench
 // These are not needed by backend
 const cellSize = 90;
 const spaceSize = 30;
+const counterSize = 20;
 const borderSize = 3;
 const boardWidth = (boardCardsWide * (cellSize + spaceSize)) + spaceSize;
 const boardHeight = (boardCardsHigh * (cellSize + spaceSize)) + spaceSize;
@@ -135,9 +136,8 @@ function toggleAttributions() {
     attributions.style.display = 'none';
   }
 }
-// Game Board Functions
 
-// Game start
+// Game Board Functions
 function startBoard() {
     document.getElementById("playArea").style.display = "flex";
     document.getElementById("mainContainer").style.minWidth = (cellSize) * handSize + 150;
@@ -202,26 +202,25 @@ function loadBoard(gameBoard) {
   for (let i = 0; i < gameBoard.length; i++) {
     let boardCol = gameBoard[i];
     for (let j = 0; j < boardCol.length; j++) {
-      let newIndex = boardCol[j]['index'];
-      updateTile(i, j, newIndex);
+      updateTile(i, j, boardCol[j]['index'], boardCol[j]['quantity']);
     }
   }
 }
-function updateTile(i, j, newIndex) {
+function updateTile(i, j, newIndex, newQuantity) {
   let tile = document.getElementById("tile_row" + i + "col" + j);
-  changeTile(tile, newIndex);
+  changeTile(tile, newIndex, newQuantity);
 }
-function changeTile(tileElement, newIndex) {
+function changeTile(tileElement, newIndex, newQuantity) {
   let type = tileElement.getAttribute("class");
   if (type == "boardCell") {
-    changeCell(tileElement, newIndex);
+    changeCell(tileElement, newIndex, newQuantity);
   } else if (type == "boardEdge") {
     changeEdge(tileElement, newIndex);
   } else if (type == "boardCorner") {
     changeCorner(tileElement, newIndex);
   }
 }
-function changeCell(tileElement, newIndex) {
+function changeCell(tileElement, newIndex, newQuantity) {
     removeAllChildren(tileElement);
     tileElement.style.backgroundColor = cells[newIndex]['color'];
     if (newIndex > 0) {
@@ -231,7 +230,27 @@ function changeCell(tileElement, newIndex) {
         icon.style.width = cellSize;
         icon.style.height = cellSize;
         tileElement.appendChild(icon);
+
+        let counter = createElement("counter", "counter" + tileElement.id, counterSize * 2, counterSize);
+        counter.setAttribute("data-col", tileElement.getAttribute("data-col"));
+        counter.setAttribute("data-row", tileElement.getAttribute("data-row"));
+
+        let counterNum = document.createElement("div");
+        counterNum.innerText = newQuantity;
+        counterNum.setAttribute("class", "counterNum");
+       
+        let upClick = createElement("upClicker", "upClicker" + tileElement.id, counterSize, counterSize);
+        upClick.setAttribute("onClick", "sendIncrement(this, 1); event.stopPropagation();");
+     
+        let downClick = createElement("downClicker", "downClicker" + tileElement.id, counterSize, counterSize);
+        downClick.setAttribute("onClick", "sendIncrement(this, -1); event.stopPropagation();");
+
+        counter.appendChild(counterNum);
+        counter.appendChild(upClick);
+        counter.appendChild(downClick);
+        tileElement.appendChild(counter);
     }
+    
 }
 function changeEdge(tileElement, newIndex) {
     tileElement.style.backgroundColor = edges[newIndex]['color'];
@@ -248,10 +267,13 @@ function changeCorner(tileElement, newIndex) {
         tileElement.appendChild(icon);
     }
 }
-
+function sendIncrement(element, amount) {
+  let counter = element.parentElement;
+  socket.emit("quantity_action", { "x": counter.getAttribute("data-col"), "y": counter.getAttribute("data-row"), "increment": amount });
+}
 // Called when a tile is clicked
 function sendTileChange(cellElement) {
-  socket.emit('board_action', { "x": cellElement.getAttribute('data-col'), "y": cellElement.getAttribute('data-row') });
+  socket.emit("board_action", { "x": cellElement.getAttribute("data-col"), "y": cellElement.getAttribute("data-row") });
 }
 // ------------- End of Game Board Functions -----------
 

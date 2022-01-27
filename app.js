@@ -34,12 +34,25 @@ const GAME_STATE = { "board": board,
                      "character": {} };
 
 const characters = { 'River': { 'canal': 2, 'well': 5, 'bean_not_touching_water': -3, 'animal': -1, 'outhouse': 2 },
-                     'Wilder': { 'animal': 3, 'cornertile': -1, 'edgetile': -1, 'outhouse': 8, 'emptycell': 4 } }
+                     'Wilder': { 'animal': 3, 'cornertile': -1, 'edgetile': -1, 'outhouse': 8, 'emptycell': 4 },
+                     'Mason': { 'cornertile': 4, 'edgetile': 2, 'facetile': -1, 'outhouse': 4, 'wood': 1, 'stone': 1 },
+                     'Fleece': { 'sheep': 3, 'corn': -2, 'squash': -2, 'outhouse': -2 },
+                     'Helen': { 'chicken': 3, 'corn': -2, 'bean': -2, 'outhouse': -4 },
+                     'Autumn': { 'tool': -5, 'rooster': -5, 'fence': -1, 'crop': -3, 'animal': 1 },
+                     'Harmony': { 'cropset': 5, 'outhouse': 10, 'animal': -1, 'well': 5, 'slaughterhouse': -5 },
+                     'Cash': { 'coin': 1 },
+                     'Meadow': { 'pasture_size_2': 3, 'pasture_size_3': 5, 'pasture_size_4': 6, 'pasture_size_5': 12 } }
+
 
 // Will need to only add character that belongs to user.
+let i = 0;
+let rand = Math.floor(Math.random() * Object.keys(characters).length);
 for (character in characters) {
-  GAME_STATE['character'][character] = characters[character];
-  break;
+  if (i == rand) {
+    GAME_STATE['character'][character] = characters[character];
+    break;
+  }
+  i++;
 }
 // ------------------------------------------
 
@@ -66,6 +79,8 @@ const gameCards = { 'wood': 25,
                     'shovel': 1,
                     'rooster': 1 };
 let gameDeck = [];
+
+clearGameState();
 // --------------------------------------
 
 // Serve client-side files
@@ -83,7 +98,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('board_action', function(client_object) {
-    updateGameState(client_object.x, client_object.y);
+    updateBoardTile(client_object.x, client_object.y);
+    io.sockets.emit('board_state_update', board);
+  });
+
+  socket.on("quantity_action", function(client_object) {
+    updateTileQuantity(client_object.x, client_object.y, client_object.increment);
     io.sockets.emit('board_state_update', board);
   });
 
@@ -115,6 +135,7 @@ function clearGameState() {
       board[i][j]['index'] = 0;
       board[i][j]['player'] = -1;
       board[i][j]['type'] = getTileType(i, j);
+      board[i][j]['quantity'] = 1;
     }
   }
   for (const tool in GAME_STATE['tools']) {
@@ -122,7 +143,7 @@ function clearGameState() {
   }
 }
 
-function updateGameState(x, y) {
+function updateBoardTile(x, y) {
   if (x != null && y != null && (0 <= x <= board_size) && (0 <= y <= board_size)) {
     let tile = GAME_STATE['board'][y][x];
     GAME_STATE['board'][y][x]['index'] = (tile['index'] + 1) % getTypeAmount(tile['type']);
@@ -166,6 +187,12 @@ function getTileName(type, index) {
   }
 }
 
+function updateTileQuantity(x, y, increment) {
+  let tile = GAME_STATE["board"][y][x];
+  if (tile["quantity"] + increment > 0) {
+    GAME_STATE["board"][y][x]["quantity"] = tile["quantity"] + increment;
+  }
+}
 function changeTool(toolName) {
   GAME_STATE['tools'][toolName] = (GAME_STATE['tools'][toolName] + 1) % 2;
 }
