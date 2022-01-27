@@ -116,13 +116,13 @@
     padding-right: 30px;
     padding-bottom: 30px;
     border: 3px solid black;
-    background-color: beige;
+    background-color: Gainsboro;
 }
 .toolTitle {
     text-align: center;
 }
 .tool {
-    background: grey;
+    background: white;
     margin:10px;
     border: 3px solid black;
 }
@@ -138,7 +138,7 @@
     border: 3px solid black;
     margin: 30px;
     justify-content: space-between;
-    background-color: beige;
+    background-color: Gainsboro;
 }
 .footerSection {
     display: flex;
@@ -157,7 +157,7 @@
   display: none;
 }
 .counter {
-  background-color: white;
+  background-color: Gainsboro;
   position: absolute;
   right: 0px;
   top: 0px;
@@ -185,4 +185,7 @@
    -khtml-user-select: none; /* Konqueror HTML */
    -moz-user-select: none; /* Firefox */
    -ms-user-select: none; /* Internet Explorer/Edge */
+}
+body {
+  background-color: Wheat;
 }

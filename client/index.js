@@ -308,7 +308,7 @@ function changeTool(toolName, isActive) {
         icon.style.width = cellSize;
         icon.style.height = cellSize;
         toolElement.appendChild(icon);
-        toolElement.style.backgroundColor = "Gainsboro";
+        toolElement.style.backgroundColor = "white";
     } else {
         toolElement.style.backgroundColor = "grey";
     }
