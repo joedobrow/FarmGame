@@ -30,7 +30,17 @@ for (let i = 0; i < tools.length; i++) {
 const GAME_STATE = { "board": board, 
                      "tools": tools,
                      "resources": [], 
-                     "hand": [] };
+                     "hands": [],
+                     "character": {} };
+
+const characters = { 'River': { 'canal': 2, 'well': 5, 'bean_not_touching_water': -3, 'animal': -1, 'outhouse': 2 },
+                     'Wilder': { 'animal': 3, 'cornertile': -1, 'edgetile': -1, 'outhouse': 8, 'emptycell': 4 } }
+
+// Will need to only add character that belongs to user.
+for (character in characters) {
+  GAME_STATE['character'][character] = characters[character];
+  break;
+}
 // ------------------------------------------
 
 // Draft State Related
@@ -210,3 +220,5 @@ function knuthShuffle(array) {
   return array;
 }
 // ------- End of Draft Functions ----------------
+
+// Character Related Functions

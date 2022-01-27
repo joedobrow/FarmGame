@@ -48,6 +48,7 @@ window.onload = () => {
   socket.on('starting_info', gameState => {
     loadBoard(gameState['board']);
     updateToolArea(gameState['tools']);
+    setCharacter(gameState['character']);
   });
 
   socket.on('game_state_update', gameState => {
@@ -102,6 +103,7 @@ function startGame() {
     createHand();
     document.getElementById("draftButton").style.display = "block";
     socket.emit('get_starting_info');
+    document.getElementById('characterSection').style.display = 'block';
 }
 function doubleCheck() {
     if (confirm('Are you sure you want to restart the game?')) {
@@ -123,6 +125,15 @@ function showPlayArea() {
   document.getElementById("playArea").style.display = "flex";
   document.getElementById("showPlayAreaButton").style.display = "none";
   document.getElementById("draftButton").style.display = "block";
+  document.getElementById('draftArea').style.display = "none";
+}
+function toggleAttributions() {
+  let attributions = document.getElementById('attributionsContainer');
+  if (attributions.style.display == 'none') {
+    attributions.style.display = 'block';
+  } else {
+    attributions.style.display = 'none';
+  }
 }
 // Game Board Functions
 
@@ -309,4 +320,33 @@ function buildDraftArea() {
   }
 }
     
+// ------------ End of Draft Area Functions ------------------------
 
+// Character Functions
+function setCharacter(character) {
+  let card = document.getElementById('characterCard');
+  removeAllChildren(card)
+  let title = document.createElement('h3');
+  title.setAttribute('class', 'characterCardTitle');
+  let listHolder = document.createElement('div');
+  listHolder.setAttribute('class', 'listHolder');
+  for (key in character) {
+    title.innerText = key;
+    card.appendChild(title);
+    card.appendChild(listHolder);
+    let newList = document.createElement('ul');
+    newList.setAttribute('id', 'conditionList');
+    for (condition in character[key]) {
+        let cond = document.createElement('li');
+        midString = ' points per ';
+        if (character[key][condition] == 1 || character[key][condition] == -1) {
+            midString = ' point per ';
+        }
+        cond.innerText = character[key][condition] + ' points per ' + condition.replaceAll('_', ' ');
+        newList.appendChild(cond);
+    }
+    listHolder.appendChild(newList);
+    card.appendChild(listHolder);
+    break;
+  }
+}

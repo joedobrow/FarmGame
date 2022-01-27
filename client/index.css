@@ -132,3 +132,30 @@
 #showPlayAreaButton {
     display: none;
 }
+.characterSection {
+    display: none;
+}
+.characterCard {
+    width: 400px;
+    height: 300px;
+    border: 3px solid black;
+    margin: 30px;
+    justify-content: space-between;
+    background-color: beige;
+}
+.footerSection {
+    display: flex;
+    justify-content: space-between;
+}
+.characterCardTitle {
+    text-align: center;
+}
+
+.listHolder {
+  display: flex;
+  flex-wrap: wrap;
+  line-height: 1.6;
+}
+.attributionsContainer {
+  display: none;
+}
