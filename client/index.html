@@ -9,11 +9,15 @@
         <div class="title">
             <h1>Phoenix Farm</h1>
         </div>
+<audio controls autoplay id="bah">
+  <source src="./content/bah.mp3" type="audio/mp3">
+Your browser does not support the audio element.
+</audio>
         <div class="buttonBar"> 
             <button id="loadButton" onclick="startGame();">Start Game</button>
             <button id="resetButton" onclick="doubleCheck()">Reset</button>
             <button id="draftButton" onclick="startDraft()">Draft</button>
-            <button id="showPlayAreaButton" onclick="showPlayArea()">Show Play Area</button>
+            <button id="showPlayAreaButton" onclick="showPlayArea()">Play Area</button>
             <a href="https://docs.google.com/document/d/1OBxjJlyyQvFg2gTMHMHFpcEGV4zrtDcFaM-0nUTQyYk/edit?usp=sharing" target="_blank">
                 <button>
                     Rules
@@ -28,7 +32,7 @@
             </div>
         </div>
         <div id="homeIcon">
-            <img id="homeIconImg" src="./content/icons/sheep.svg" onclick="startGame()"></img>
+            <img id="homeIconImg" src="./content/icons/sheep.svg" onclick="playBah(); startGame()"></img>
         </div>
         <div id="draftArea">
           <h3 id="draftTitle">Draft Area</h3>

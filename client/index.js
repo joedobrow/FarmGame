@@ -112,6 +112,11 @@ function doubleCheck() {
         startGame();
     }
 }
+function playBah() {
+  let clip = document.getElementById("bah");
+  clip.autoPlay = true;
+  clip.load();
+}
 function sendClearBoard() {
   socket.emit('clear_board');
 }
