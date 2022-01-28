@@ -31,6 +31,20 @@ let edges =   [{ "name": "empty", "color": "black" },
 let toolNames = ["hammer", "wrench", "saw", "shovel", "rooster"];
 
 let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
+
+let shopItems = { "hammer": [6, ""], 
+                  "wrench": [6, ""], 
+                  "saw": [6, ""], 
+                  "shovel": [6, ""], 
+                  "rooster": [6, ""],
+                  "sheep": [3, ""],
+                  "hen": [3, ""],
+                  "squash": [3, ""],
+                  "bean": [3, ""],
+                  "corn": [3, ""],
+                  "wood": [3, ""],
+                  "stone": [3, ""],
+                  "coffee": [3, "Become the starting player"] };
 // -------------------------------
 
 // These are not needed by backend
@@ -375,5 +389,47 @@ function setCharacter(character) {
     listHolder.appendChild(newList);
     card.appendChild(listHolder);
     break;
+  }
+}
+// Shop
+document.addEventListener("DOMContentLoaded", function () {
+  buildShop();
+});
+function buildShop() {
+console.log("building shop");
+  let shop = document.getElementById("shop");
+  for (item in shopItems) {
+    let row = document.createElement("div");
+    row.setAttribute("class", "shopRow");
+    let col1 = document.createElement("div");
+    col1.setAttribute("class", "shopItemName shopCol");
+    col1.innerText = item;
+    let col2 = document.createElement("div");
+    col2.setAttribute("class", "shopItemCost shopCol");
+    col2.innerText = shopItems[item][0];
+    let col3 = document.createElement("div");
+    col3.setAttribute("class", "shopItemText shopCol");
+    col3.innerText = shopItems[item][1];
+    row.appendChild(col1);
+    row.appendChild(col2);
+    row.appendChild(col3);
+    shop.appendChild(row);
+  }
+}
+
+
+// Modal
+function showShop() {
+  let modal = document.getElementById("shopCard");
+  modal.style.display = "block";
+}
+function closeShop() {
+  let modal = document.getElementById("shopCard");
+  modal.style.display = "none";
+}
+window.onclick = function(event) {
+  let modal = document.getElementById("shopCard");
+  if (event.target == modal) {
+    modal.style.display = "none";
   }
 }

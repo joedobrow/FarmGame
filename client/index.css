@@ -208,3 +208,70 @@
 body {
   background-color: Wheat;
 }
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgb(0,0,0);
+  background-color: rgba(0,0,0,0.6);
+}
+
+.modal-content {
+  background-color: Wheat;
+  margin: 5% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 400px;
+  height: 600px;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+.shopContent {
+  display: table;
+  width: auto;
+  border-spacing: 5px;
+}
+
+.shopRow {
+  display: inline-block;
+  border: 1px solid black;
+  padding: 5px;
+  margin: 2px;
+  background-color: Gainsboro;
+}
+
+.shopItemName {
+  float:left;
+  display: table-column;
+  width: 100px;
+}
+
+.shopItemCost {
+  float: left;
+  display: table-column;
+  width: 56px;
+}
+
+.shopItemText {
+  float: left;
+  display: table-column;
+  width: 215px;
+}

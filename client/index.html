@@ -9,15 +9,12 @@
         <div class="title">
             <h1>Phoenix Farm</h1>
         </div>
-<audio controls autoplay id="bah">
-  <source src="./content/bah.mp3" type="audio/mp3">
-Your browser does not support the audio element.
-</audio>
         <div class="buttonBar"> 
             <button id="loadButton" onclick="startGame();">Start Game</button>
             <button id="resetButton" onclick="doubleCheck()">Reset</button>
             <button id="draftButton" onclick="startDraft()">Draft</button>
             <button id="showPlayAreaButton" onclick="showPlayArea()">Play Area</button>
+            <button id="shopButton" onclick="showShop()">Shop</button>
             <a href="https://docs.google.com/document/d/1OBxjJlyyQvFg2gTMHMHFpcEGV4zrtDcFaM-0nUTQyYk/edit?usp=sharing" target="_blank">
                 <button>
                     Rules
@@ -81,9 +78,20 @@ Your browser does not support the audio element.
                 <div>Rooster by Symbolon</div>
             </div>
         </div>
+        <div class="modal" id="shopCard">
+          <div class="modal-content">
+            <span class="close" onclick="closeShop()">&times;</span>
+            <h3 class="title">The Shop</h3>
+            <div class="shopContent" id="shop">
+            </div>
+          </div>
+        </div>
     </div>
-<script src="/socket.io/socket.io.js"></script>
-<script>
-  var socket = io();
-</script>
+    <audio controls autoplay id="bah">
+      <source src="./content/bah.mp3" type="audio/mp3">
+    </audio>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io();
+    </script>
 </body>
