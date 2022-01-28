@@ -128,12 +128,12 @@ function showPlayArea() {
   document.getElementById("draftButton").style.display = "block";
   document.getElementById('draftArea').style.display = "none";
 }
-function toggleAttributions() {
+function toggleAttributions(element) {
   let attributions = document.getElementById('attributionsContainer');
-  if (attributions.style.display == 'none') {
-    attributions.style.display = 'block';
-  } else {
+  if (attributions.style.display == 'block') {
     attributions.style.display = 'none';
+  } else {
+    attributions.style.display = 'block';
   }
 }
 

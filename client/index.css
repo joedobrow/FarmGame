@@ -6,12 +6,26 @@
     position: relative;
 }
 #homeIcon {
+    margin-top: 20px;
     text-align: -webkit-center;
 }
 
+#homeIcon img:hover {
+  background-color: white;
+  cursor: pointer;
+}
+
 #homeIcon img {
+
+    border-radius: 250px;
+    background-color: Wheat;
     height: 500px;
     width: 500px;
+    -webkit-transition: background-color 2s ease-out;
+    -moz-transition: background-color 2s ease-out;
+    -o-transition: background-color 2s ease-out;
+    transition: background-color 2s ease;
+
 }
 
 .italic {

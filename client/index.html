@@ -7,7 +7,7 @@
 <body>
     <div class="mainContainer disableSelect" id="mainContainer">
         <div class="title">
-            <h1>Phoenix Farms</h1>
+            <h1>Phoenix Farm</h1>
         </div>
         <div class="buttonBar"> 
             <button id="loadButton" onclick="startGame();">Start Game</button>
@@ -54,8 +54,8 @@
           </div>
         </div>
         <div class="attributions">
-            <h3 onclick="toggleAttributions()">Icon Attributions</h3>
-            <div class="attributionsContainer" id="attributionsContainer">
+            <h3 class="attributionsTitle" onclick="toggleAttributions(this)">Icon Attributions</h3>
+            <div class="attributionsContainer" id="attributionsContainer" onclick="toggleAttributions(this)">
                 <div class="italic">All Icons from NounProject.com</div>
                 <br>
                 <div>Sheep by AFY Studio</div>
