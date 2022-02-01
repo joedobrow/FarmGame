@@ -1,7 +1,8 @@
-<!DOCTYPE html lange="en">
+<!DOCTYPE html lang="en">
 <title>Farm Game</title>
 <head>
     <link rel="stylesheet" type="text/css" href="index.css" />
+    <script src="/socket.io/socket.io.js"></script>
     <script src="index.js"></script>
 </head>
 <body>
@@ -11,8 +12,8 @@
         </div>
         <div class="buttonBar"> 
             <button id="loadButton" onclick="startGame();">Start Game</button>
-            <button id="resetButton" onclick="doubleCheck()">Reset</button>
-            <button id="draftButton" onclick="startDraft()">Draft</button>
+            <button id="resetButton" onclick="doubleCheckReset()">Reset</button>
+            <button id="draftButton" onclick="doubleCheckDraft()">Draft</button>
             <button id="showPlayAreaButton" onclick="showPlayArea()">Play Area</button>
             <button id="shopButton" onclick="showShop()">Shop</button>
             <a href="https://docs.google.com/document/d/1OBxjJlyyQvFg2gTMHMHFpcEGV4zrtDcFaM-0nUTQyYk/edit?usp=sharing" target="_blank">
@@ -20,16 +21,27 @@
                     Rules
                 </button>
             </a>
+            <span><div id="playerNum"></div></span>&nbsp;
+            <span><div id="roundNum"></div></span>
         </div>
         <div id="playArea">
-            <div id="toolArea">
-                <h3>Tools</h3>
+            <div class="sidebar" id="structureArea">
+                <h3 class="sidebarTitle">Structures</h3>
             </div>
             <div id="board">
+            </div>
+            <div class="sidebar" id="contactArea">
+                <h3 class="sidebarTitle">Contacts</h3>
             </div>
         </div>
         <div id="homeIcon">
             <img id="homeIconImg" src="./content/icons/sheep.svg" onclick="playBah(); startGame()"></img>
+        </div>
+        <div class="modal" id="gameFullCard">
+          <div class="modal-content gamefull-content">
+          <span class="close" onclick="closeGameFull()">&times;</span>
+          <div>Game is Full!</div>
+          </div>
         </div>
         <div id="draftArea">
           <h3 id="draftTitle">Draft Area</h3>
@@ -76,10 +88,11 @@
                 <div>Saw by Atif Arshad</div>
                 <div>Shovel by Alvaro Cabrera</div>
                 <div>Rooster by Symbolon</div>
+                <div>Arrow Up by carlos gonzalez</div>
             </div>
         </div>
         <div class="modal" id="shopCard">
-          <div class="modal-content">
+          <div class="modal-content shop-content">
             <span class="close" onclick="closeShop()">&times;</span>
             <h3 class="title">The Shop</h3>
             <div class="shopContent" id="shop">
@@ -90,8 +103,4 @@
     <audio controls autoplay id="bah">
       <source src="./content/bah.mp3" type="audio/mp3">
     </audio>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      var socket = io();
-    </script>
 </body>

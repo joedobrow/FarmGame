@@ -16,16 +16,14 @@
 }
 
 #homeIcon img {
-
     border-radius: 250px;
     background-color: Wheat;
     height: 500px;
     width: 500px;
-    -webkit-transition: background-color 2s ease-out;
-    -moz-transition: background-color 2s ease-out;
-    -o-transition: background-color 2s ease-out;
-    transition: background-color 2s ease;
-
+    -webkit-transition: background-color 1s ease-out;
+    -moz-transition: background-color 1s ease-out;
+    -o-transition: background-color 1s ease-out;
+    transition: background-color 1s ease;
 }
 
 .italic {
@@ -37,6 +35,7 @@
 }
 .attributions {
     float: right;
+    margin-right: 20px;
 }
 .title {
     text-align: -webkit-center;
@@ -73,6 +72,7 @@
     margin-bottom: 3px;
     border: 3px solid black;
     background-color: grey;
+    position: relative;
 }
 .boardSpace {
     display: flex;
@@ -127,18 +127,18 @@
 #lineBreak {
     width: 100% !important;
 }
-#toolArea {
+.sidebar {
     padding-left: 30px;
     padding-right: 30px;
     padding-bottom: 30px;
     border: 3px solid black;
     background-color: Gainsboro;
 }
-.toolTitle {
+.sidebarTitle {
     text-align: center;
 }
 .tool {
-    background: white;
+    background: grey;
     margin: 10px;
     border: 3px solid black;
 }
@@ -196,11 +196,11 @@
   left: 0px;
 }
 .disableSelect {
-  user-select: none; /* supported by Chrome and Opera */
-   -webkit-user-select: none; /* Safari */
-   -khtml-user-select: none; /* Konqueror HTML */
-   -moz-user-select: none; /* Firefox */
-   -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none; 
 }
 #bah {
   display: none;
@@ -227,8 +227,16 @@ body {
   margin: 5% auto;
   padding: 20px;
   border: 1px solid #888;
+}
+
+.shop-content {
   width: 400px;
   height: 600px;
+}
+
+.gamefull-content {
+  width: 300px;
+  height: 50px;
 }
 
 .close {
@@ -274,4 +282,41 @@ body {
   float: left;
   display: table-column;
   width: 215px;
+}
+.gamefull-content {
+  text-align: center;
+}
+.draftStarted {
+  background-color:yellow;
+}
+.draftCardTitle {
+  border-bottom: 2px solid black;
+  padding: 2px;
+}
+.draftCardBody {
+  text-align: left;
+  padding: 2px;
+  font-size: 14px;
+}
+.handCard {
+  font-size: 11;
+}
+.pushButton {
+  background-color: yellow;
+  position: absolute;
+  right: 0px;
+  top: 0px;
+  opacity: .3;
+}
+.pushButton:hover {
+  opacity: .8;
+  border: 1px solid black;
+}
+.pushButton:hover .upArrow {
+  display: block;
+}
+.upArrow {
+  display: none;
+  width: 100%;
+  height: 100%;
 }

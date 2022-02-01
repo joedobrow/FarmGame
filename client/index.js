@@ -1,12 +1,15 @@
 // FARM GAME MAIN CLIENT SIDE JS
 
+
+let socket = io();
 // Game Constants
 
 // These are needed by backend as well, todo: have app.js send these at connection.
 const boardCardsWide = 5;
 const boardCardsHigh = 5;
 const handSize = 9;
-
+const maxStructures = 5; // It's actually 3, but there are cards that increase it
+const maxContacts = 5; // It's actually 3, but there are cards that increase it
 // Names are used by app.js, but colors are only for client.
 let corners = [{ "name": "empty", "color": "black" },
                { "name": "chickencoop", "color": "goldenrod" },
@@ -20,7 +23,7 @@ let corners = [{ "name": "empty", "color": "black" },
 let cells =   [{ "name": "empty", "color": "grey" }, 
                { "name": "sheep", "color": "white" },
                { "name": "hen", "color": "goldenrod" },
-               { "name": "squash", "color": "olivedrab" },
+     //          { "name": "squash", "color": "olivedrab" },
                { "name": "bean", "color": "burlywood" },
                { "name": "corn", "color": "gold" }];
 
@@ -28,8 +31,6 @@ let edges =   [{ "name": "empty", "color": "black" },
                { "name": "fence", "color": "saddlebrown" },
                { "name": "canal", "color": "aqua" }];
                
-let toolNames = ["hammer", "wrench", "saw", "shovel", "rooster"];
-
 let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
 
 let shopItems = { "hammer": [6, ""], 
@@ -44,51 +45,108 @@ let shopItems = { "hammer": [6, ""],
                   "corn": [3, ""],
                   "wood": [3, ""],
                   "stone": [3, ""],
-                  "coffee": [3, "Become the starting player"] };
+                  "coffee": [2, "Become the starting player"] };
+
+let gameFull = false;
+let draftStarted = false;
+let playerId = -1;
 // -------------------------------
 
 // These are not needed by backend
-const cellSize = 90;
-const spaceSize = 30;
+const cellSize = 100;
+const spaceSize = 20;
 const counterSize = 20;
 const borderSize = 3;
 const boardWidth = (boardCardsWide * (cellSize + spaceSize)) + spaceSize;
 const boardHeight = (boardCardsHigh * (cellSize + spaceSize)) + spaceSize;
 // -------------------------------
 
+
 // Node Listeners
 window.onload = () => {
-  const socket = io();
 
   socket.on('starting_info', gameState => {
-    loadBoard(gameState['board']);
-    updateToolArea(gameState['tools']);
-    setCharacter(gameState['character']);
+    buildGame(gameState);
   });
 
   socket.on('game_state_update', gameState => {
     loadBoard(gameState['board']);
-    updateToolArea(gameState['tools']);
   });
 
   socket.on('board_state_update', boardState => {
     loadBoard(boardState);
   });
 
-  socket.on('tool_state_update', tools => {
-    updateToolArea(tools);
+  socket.on('game_state_reset', boardState => {
+    restart();  
   });
+
+  socket.on('game-full', isFull => {
+    setGameFull(isFull);
+  });
+
+  socket.on('player-info', playerInfo => {
+    setPlayerId(playerInfo['playerId']);
+    setPlayerNum(playerInfo['playerNum']);
+    setRoundNum(1);
+  });
+
+  socket.on("draft_info", draftInfo => {
+    handleDraftInfo(draftInfo);
+  });
+
+  socket.on("reset_hands", response => {
+    resetHand();
+  });
+
+  socket.on("pack", packState => {
+    loadPack(packState);
+  });
+
+  socket.on("draft_not_full", response => {
+    draftNotFull(response);
+  });
+
+  socket.on("card_to_hand", handState => {
+    displayHand(handState);
+  });
+
+  socket.on("character_info", characterInfo => {
+    setCharacter(characterInfo);
+  });
+
+  socket.on("end_draft_round", response => {
+    showPlayArea();
+    handleDraftInfo(false);
+  });
+  
+  socket.on("set_game_round", round => {
+    setRoundNum(round);
+  });
+
+  socket.on("structure_state_update", response => {
+    updateStructures(response);
+  });
+
+  socket.on("contact_state_update", response => {
+    updateContacts(response);
+  });
+
+  socket.on('message', message => {
+    console.log(message);
+  });
+
 }
 // ------------------------------
 
 // Helper functions
 function createElement(eleClass, id, width, height) {
-    let newElement = document.createElement("div");
-    newElement.setAttribute("class", eleClass);
-    newElement.setAttribute("id", id);
-    newElement.style.width = width;
-    newElement.style.height = height;
-    return newElement;
+  let newElement = document.createElement("div");
+  newElement.setAttribute("class", eleClass);
+  newElement.setAttribute("id", id);
+  newElement.style.width = width;
+  newElement.style.height = height;
+  return newElement;
 }
 
 function createTile(eleClass, eleId, x, y, width, height) {
@@ -103,44 +161,107 @@ function createTile(eleClass, eleId, x, y, width, height) {
 }
 
 function removeAllChildren(parent) {
-    while (parent.firstChild) {
-        parent.removeChild(parent.firstChild);
-    }
+  while (parent.firstChild) {
+    parent.removeChild(parent.firstChild);
+  }
 }
 // ---------------------------
 
 // Game State Functions
 function startGame() {
+  socket.emit('get_starting_info', getPlayerIdCookie());
+}
+
+function buildGame(gameState) {
+  if (playerId == -1) {
     startBoard();
-    removeAllChildren(document.getElementById("toolArea"));
-    createToolArea();
+    removeAllChildren(document.getElementById("structureArea"));
+    createStructureArea();
+    removeAllChildren(document.getElementById("contactArea"));
+    createContactArea();
     removeAllChildren(document.getElementById("hand"));
     createHand();
     document.getElementById("draftButton").style.display = "block";
-    socket.emit('get_starting_info');
-    document.getElementById('characterSection').style.display = 'block';
+    document.getElementById('characterSection').style.display = "block";
+    loadBoard(gameState['board']);
+  } else if (gameFull) {
+    showGameFull();
+  }
 }
-function doubleCheck() {
-    if (confirm('Are you sure you want to restart the game?')) {
-        sendClearBoard();
-        startGame();
-    }
+function doubleCheckReset() {
+  if (confirm("Are you sure you want to restart the game?")) {
+    sendClearBoard();
+  }
+}
+function doubleCheckDraft() {
+  if (draftStarted) {
+    joinDraft();
+  } else if (confirm("Are you sure you want to start the Draft?")) {
+    startDraft();
+  }
+}
+function restart() {
+  gameFull = false;
+  playerId = -1;
+  location.reload();
 }
 function playBah() {
   let clip = document.getElementById("bah");
   clip.autoPlay = true;
   clip.load();
 }
+function setGameFull(isFull) {
+  gameFull = isFull;
+  showGameFull();
+}
+function setPlayerId(playerId) {
+  playerId = playerId;
+  document.cookie = "farmGamePlayerId=" + playerId;
+}
+function setPlayerNum(playerNum) {
+  let numBlock = document.getElementById("playerNum");
+  numBlock.innerText = "Player " + (playerNum + 1);
+}
+function setRoundNum(roundNum) {
+  let roundBlock = document.getElementById("roundNum");
+  roundBlock.innerText = "Round " + roundNum;
+}
+function getPlayerIdCookie() {
+  let name = "farmGamePlayerId=";
+  let decodedCookie = decodeURIComponent(document.cookie);
+  let ca = decodedCookie.split(';');
+  for(let i = 0; i <ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) == 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
+}
 function sendClearBoard() {
   socket.emit('clear_board');
 }
 function startDraft() {
+  draftStarted = true;
+  socket.emit("start_draft");
   document.getElementById("playArea").style.display = "none";
   document.getElementById("showPlayAreaButton").style.display = "block";
   document.getElementById("draftButton").style.display = "none";
   document.getElementById("draftArea").style.display = "block";
   buildDraftArea();
 }
+function joinDraft() {
+  socket.emit("join_draft");
+  document.getElementById("playArea").style.display = "none";
+  document.getElementById("showPlayAreaButton").style.display = "block";
+  document.getElementById("draftButton").style.display = "none";
+  document.getElementById("draftArea").style.display = "block";
+  buildDraftArea();
+}
+
 function showPlayArea() {
   document.getElementById("playArea").style.display = "flex";
   document.getElementById("showPlayAreaButton").style.display = "none";
@@ -194,7 +315,6 @@ function fillBoardSpace(rowElement) {
         rowElement.appendChild(edge);
 
         let corner = createTile("boardCorner", "tile_row" + rowNum + "col" + (i + 2), rowNum, (i + 2), spaceSize, spaceSize);
-        corner.setAttribute("onclick", "sendTileChange(this)");
         rowElement.appendChild(corner);
     }
 }
@@ -296,59 +416,91 @@ function sendTileChange(cellElement) {
 }
 // ------------- End of Game Board Functions -----------
 
-// Tool Area Functions
+// Structure/Contact Area Functions
 
 // Initialize
-function createToolArea() {
-    let toolArea = document.getElementById("toolArea");
-    let title = document.createElement("h3");
-    title.setAttribute("class", "toolTitle");
-    title.innerText = "Tools";
-    toolArea.appendChild(title);
-    for (let i = 0; i < toolNames.length; i++) {
-        let newTool = createElement("tool", toolNames[i], (cellSize + borderSize), (cellSize + borderSize));
-        newTool.setAttribute("onclick", "sendTool(this);");
-        toolArea.appendChild(newTool);
-    }
+function createStructureArea() {
+  let structureArea = document.getElementById("structureArea");
+  structureArea.removeAllChildren();
+  let title = document.createElement("h3");
+  title.setAttribute("class", "sidebarTitle");
+  title.innerText = "Structures";
+  structureArea.appendChild(title);
+  for (let i = 0; i < maxStructures; i++) {
+    let newStructure = createElement("structureCard", "structureCard" + i, (cellSize + borderSize), (cellSize + borderSize));
+    structureArea.appendChild(newStructure);
+  }
 }
-// Called when backend sends a game state update
-function updateToolArea(tools) {
-  for (const tool in tools) {
-    changeTool(tool, tools[tool]);
-  } 
+function createContactArea() {
+  let contactArea = document.getElementById("contactArea");
+  contactArea.removeAllChildren();
+  let title = document.createElement("h3");
+  title.setAttribute("class", "contactTitle");
+  title.innerText = "Contacts";
+  contactArea.appendChild(title);
+  for (let i = 0; i < maxContacts; i++) {
+    let newContact = createElement("contactCard", "contactCard" + i, (cellSize + borderSize), (cellSize + borderSize));
+    contactArea.appendChild(newContact);
+  }
 }
-function changeTool(toolName, isActive) {
-    let toolElement = document.getElementById(toolName);
-    removeAllChildren(toolElement) 
-    if (isActive) {
-        let icon = document.createElement("img");
-        icon.setAttribute("src", "./content/icons/" + toolElement.getAttribute("id") + ".svg");
-        icon.setAttribute("alt", toolElement.getAttribute("id"));
-        icon.style.width = cellSize;
-        icon.style.height = cellSize;
-        toolElement.appendChild(icon);
-        toolElement.style.backgroundColor = "white";
-    } else {
-        toolElement.style.backgroundColor = "grey";
-    }
+function updateStructures(structures) {
+  createStructureArea(); 
+  for (let i = 0; i < structures.length; i++) {
+    let structureCard = document.getElementById("structureCard" + i);
+    structureCard.innerText = structures[i];
+  }
 }
-// Called when a tool is clicked, emits data to backend
-function sendTool(toolElement) {
-  let toolName = toolElement.getAttribute("id");
-  socket.emit('tool_action', { 'tool': toolName });
+function updateContacts(contacts) {
+  createContactArea();
+  for (let i = 0; i < contacts.length; i++) {
+    let contactCard = document.getElementById("contactCard" + i);
+    contactCard.innerText = contacts[i];
 }
-// --------- End of Tool Functions -------------
-
+// ------ End of Structure/Contact Area functions -------
 
 // Hand Functions
 function createHand() {
-    for (let i = 0; i < handSize; i++) {
-        let newCard = createElement("handCard", "handCard", (cellSize + borderSize), (cellSize + borderSize));
-        newCard.setAttribute("onclick", "changeCell(this)");
-        document.getElementById("hand").appendChild(newCard);
+  for (let i = 0; i < handSize; i++) {
+    let newCard = createElement("handCard", "handCard" + i, (cellSize + borderSize), (cellSize + borderSize));
+    newCard.setAttribute("onclick", "toggleHand(this)");
+    document.getElementById("hand").appendChild(newCard);
+  }
+}
+function displayHand(handState) {
+  for (let i = 0; i < handState.length; i++) {
+    let cardElement = document.getElementById("handCard" + i);
+    cardElement.innerText = handState[i]["text"];
+    if (handState[i]["type"] == "structure" || handState[i]["type"] == "contact") {
+      let pushButton = createElement("pushButton", "pushButton" + i, 30, 30);
+      let upArrow = document.createElement("img");
+      upArrow.setAttribute("src", "./content/icons/uparrow.svg");
+      upArrow.setAttribute("alt", "arrow");
+      upArrow.setAttribute("class", "upArrow");
+      upArrow.setAttribute("onclick", "pushCard(" + handState[i]["type"] + ", " + handState[i]["text"] +");");
+      pushButton.appendChild(upArrow); 
+      cardElement.appendChild(pushButton);
     }
+  }
+}
+function pushCard(type, body) {
+  socket.emit("push_card_action", { "type": type, "body": body });
+}
+function toggleHand(handElement) {
+  if (handElement.style.color == "grey") {
+    handElement.style.color = "black";
+  } else {
+    handElement.style.color = "grey";
+  }
+}
+function resetHand() {
+  for (let i = 0; i < handSize; i++) {
+    let card = document.getElementById("handCard" + i);
+    card.innerText = "";
+    card.style.color = "black";
+  }
 }
 // ---------- End of Hand Functions -------------------------------
+
 
 // Draft Area Functions
 function buildDraftArea() {
@@ -357,46 +509,91 @@ function buildDraftArea() {
   for (let i = 0; i < handSize; i++) {
     let newCard = document.createElement("div");
     newCard.setAttribute("class", "draftCard");
+    newCard.setAttribute("id", "draftCard" + i);
+    let titleArea = document.createElement("div");
+    titleArea.setAttribute("class", "draftCardTitle");
+    titleArea.setAttribute("id", "draftCardTitle" + i);
+    let bodyArea = document.createElement("div");
+    bodyArea.setAttribute("class", "draftCardBody");
+    bodyArea.setAttribute("id", "draftCardBody" + i);
+    newCard.appendChild(titleArea);
+    newCard.appendChild(bodyArea);
     draftBoard.appendChild(newCard);
   }
 }
-    
+
+function loadPack(packState) {
+  console.log(packState);
+  for (let i = 0; i < packState.length; i++) {
+      console.log(packState[i]);
+      let cardTitle = document.getElementById("draftCardTitle" + i);
+      cardTitle.innerText = packState[i]["type"].charAt(0).toUpperCase() + packState[i]["type"].slice(1);
+      let cardBody = document.getElementById("draftCardBody" + i);
+      cardBody.innerText = packState[i]["text"].replace("//", "\n\n");
+      let card = document.getElementById("draftCard" + i);
+      card.setAttribute("onclick", "pickCard('" + i + "', " + (handSize - packState.length) + ")");
+  }  
+}
+function pickCard(cardIndex, pickNumber) {
+  socket.emit("draft_choice", cardIndex);
+  clearDraft();
+}
+function handleDraftInfo(draftInfo) {
+  draftStarted = draftInfo;
+  let draftButton = document.getElementById("draftButton");
+  if (draftStarted) {
+    draftButton.setAttribute("class", "draftStarted");
+  } else {
+    draftButton.setAttribute("class", "");
+  }
+}
+function clearDraft() {
+  for (let i = 0; i < handSize; i++) {
+    let draftCardTitle = document.getElementById("draftCardTitle" + i);
+    draftCardTitle.innerText = "";
+    let draftCardBody = document.getElementById("draftCardBody" + i);
+    draftCardBody.innerText = "";
+  }
+}
+function draftNotFull(response) {
+  alert("Cannot start draft, only " + response["numConnected"] + " out of " + response["numPlayers"] + " ready.");
+  draftStarted = false;
+  showPlayArea();
+} 
 // ------------ End of Draft Area Functions ------------------------
 
 // Character Functions
-function setCharacter(character) {
+function setCharacter(characterInfo) {
   let card = document.getElementById('characterCard');
   removeAllChildren(card)
   let title = document.createElement('h3');
   title.setAttribute('class', 'characterCardTitle');
   let listHolder = document.createElement('div');
   listHolder.setAttribute('class', 'listHolder');
-  for (key in character) {
-    title.innerText = key;
-    card.appendChild(title);
-    card.appendChild(listHolder);
-    let newList = document.createElement('ul');
-    newList.setAttribute('id', 'conditionList');
-    for (condition in character[key]) {
-        let cond = document.createElement('li');
-        midString = ' points per ';
-        if (character[key][condition] == 1 || character[key][condition] == -1) {
-            midString = ' point per ';
-        }
-        cond.innerText = character[key][condition] + ' points per ' + condition.replaceAll('_', ' ');
-        newList.appendChild(cond);
+
+  title.innerText = characterInfo[0];
+  card.appendChild(title);
+  card.appendChild(listHolder);
+  let newList = document.createElement('ul');
+  newList.setAttribute('id', 'conditionList');
+  for (condition in characterInfo[1]) {
+    let cond = document.createElement('li');
+    midString = ' points per ';
+    if (characterInfo[1][condition] == 1 || characterInfo[1][condition] == -1) {
+      midString = ' point per ';
     }
-    listHolder.appendChild(newList);
-    card.appendChild(listHolder);
-    break;
+    cond.innerText = characterInfo[1][condition] + ' points per ' + condition.replaceAll('_', ' ');
+    newList.appendChild(cond);
   }
+  listHolder.appendChild(newList);
+  card.appendChild(listHolder);
 }
-// Shop
+
+// Shop functions
 document.addEventListener("DOMContentLoaded", function () {
   buildShop();
 });
 function buildShop() {
-console.log("building shop");
   let shop = document.getElementById("shop");
   for (item in shopItems) {
     let row = document.createElement("div");
@@ -416,7 +613,7 @@ console.log("building shop");
     shop.appendChild(row);
   }
 }
-
+// --------- End of Shop ------------
 
 // Modal
 function showShop() {
@@ -427,9 +624,20 @@ function closeShop() {
   let modal = document.getElementById("shopCard");
   modal.style.display = "none";
 }
+function showGameFull() {
+console.log("showGameFull");
+  let fullElement = document.getElementById("gameFullCard");
+  fullElement.style.display = "block";
+}
+function closeGameFull() {
+  let modal = document.getElementById("gameFullCard");
+  modal.style.display = "none";
+}
 window.onclick = function(event) {
-  let modal = document.getElementById("shopCard");
-  if (event.target == modal) {
-    modal.style.display = "none";
+  let modals = document.querySelectorAll('.modal');
+  if (event.target.classList.contains("modal")) {
+    for (var index in modals) {
+      if (typeof modals[index].style != "undefined") modals[index].style.display = "none";    
+    }
   }
 }
