@@ -38,27 +38,17 @@ let PLAYERS = [];
 const GAME_STATE = { "board": board, 
                      "contacts": [],
                      "structures": [],
-                     "resources": [], };
+                     "resources": [], 
+                     "characters": [] };
 
-let CHARACTERS = { 'River': { 'canal': 2, 'well': 5, 'bean_not_touching_water': -3, 'animal': -1, 'outhouse': 2 },
-                     'Wilder': { 'animal': 3, 'cornertile': -1, 'edgetile': -1, 'outhouse': 8, 'emptycell': 4 },
-                     'Mason': { 'cornertile': 4, 'edgetile': 2, 'facetile': -1, 'outhouse': 4, 'wood': 1, 'stone': 1 },
-                     'Fleece': { 'sheep': 3, 'corn': -2, 'squash': -2, 'outhouse': -2 },
-                     'Helen': { 'chicken': 3, 'corn': -2, 'bean': -2, 'outhouse': -4 },
-                     'Autumn': { 'tool': -5, 'rooster': -5, 'fence': -1, 'crop': -3, 'animal': 1 },
-                     'Harmony': { 'cropset': 5, 'outhouse': 10, 'animal': -1, 'well': 5, 'slaughterhouse': -5 },
-                     'Cash': { 'coin': 1 },
-                     'Meadow': { 'pasture_size_2': 3, 'pasture_size_3': 5, 'pasture_size_4': 6, 'pasture_size_5': 12 } }
-
+let CHARACTERS = ["river", "wilder", "mason", "fleece", "helen", "autumn", "harmony", "cash", "meadow"];
 
 // Will need to only add character that belongs to user.
 function chooseCharacter() {
-  let i = 0;
-  let rand = Math.floor(Math.random() * Object.keys(CHARACTERS).length);
-  let character = Object.keys(CHARACTERS)[rand];
-  let stats = CHARACTERS[character];
-  delete CHARACTERS[character];
-  return [character, stats];
+  let rand = Math.floor(Math.random() * CHARACTERS.length);
+  let character = CHARACTERS[rand];
+  GAME_STATE["characters"].push(CHARACTERS.pop(character));
+  return character;
 }
 // ------------------------------------------
 
@@ -175,13 +165,13 @@ const gameCards = [ // resources
 
     {"text": "Chicken Coop: Get 3 chickens, fenced chicken squares hold an additional chicken. Cost: 3 fences, 2 beans // 1 hen","amount": 1, "type": "structure"},
     {"text": "Antique Plow: Get any 4 crops, crop squares can hold an additional 1 crop. Cost: 2 market contacts // any 1 crop","amount": 1, "type": "structure"},
-    {"text": "Slaughterhouse: Remove 2 animals, gain any 2 resources. Each harvest, starting player removes 1 animal. Cost: 1 sheep, 1 chick, 1 fence, 1 canal // 1 fence","amount": 1, "type": "structure"},
+    {"text": "Slaughterhouse: Remove 2 animals, gain any 2 resources. Each harvest, SP removes 1 animal. Cost: 2 sheep, 2 chick // 1 fence","amount": 1, "type": "structure"},
     {"text": "Irrigation network: Get 5 crops. crop squares can hold an additional 1 crop. Cost: 3 canals // 1 canal","amount": 1, "type": "structure"},
     {"text": "The Loom: Get 1 resource per tile with sheep. Sheep squares can hold an additional sheep. Cost: 2 fences, 3 sheep // 1 sheep","amount": 1, "type": "structure"},
-    {"text": "Tractor: Remove 2 animals, gain any 2 resources. Each harvest, starting player removes 1 crop. Cost: 1 bean, 1 corn, 1 fence, 1 canal // 1 canal","amount": 1, "type": "structure"},
-    {"text": "The Well: Get a sheep, a hen, a corn, a bean, a fence, and a canal. Each resources square can hold an additional resource. Cost: 5 canals // 1 canal","amount": 1, "type": "structure"},
+    {"text": "Tractor: Remove 2 animals, gain 2 resources. Each harvest, SP removes 1 crop. Cost: 1 bean, 1 corn, 1 fence, 1 canal // 1 canal","amount": 1, "type": "structure"},
+    {"text": "The Well: Get 1 of each resource. Each resource square can hold an additional resource. Cost: 5 canals // 1 canal","amount": 1, "type": "structure"},
     {"text": "The Slurry Pit: Remove 2 crops, gain any 2 resources. Each harvest, starting player removes 1 crop. Cost: 1 fence, 3 canals // 1 canal","amount": 1, "type": "structure"},
-    {"text": "The Mother-in-law Suite: You may use a contact two additional times this turn. there are +2 max contacts. Cost: 2 fences, 1 bean // 1 fence","amount": 1, "type": "structure"},
+    {"text": "The Mother-in-law Suite: You may use a contact +2 times this turn. there are +2 max contacts. Cost: 2 fences, 1 bean // 1 fence","amount": 1, "type": "structure"},
     {"text": "The Japanese Garden: +1 max objectives, you may copy one of your objectives. Cost: 2 canals, 2 corn // 1 corn","amount": 1, "type": "structure"},
     {"text": "The roost: All players must place 1 extra hen during each of their play rounds. Cost: 5 corn // 1 corn","amount": 1, "type": "structure"},
   //  "The Greenhouse: All players draft an additional card each round. Cost: 2 fences, 1 canal, 1 bean // 1 bean": 1,
@@ -189,6 +179,9 @@ const gameCards = [ // resources
     {"text": "The observation deck: All players get an +2 points per base objective. Cost: 1 of each resource // 1 of any resource","amount": 1, "type": "structure"},
     {"text": "The trough: All players must place 1 extra sheep during each of their play rounds. Cost: 5 beans // 1 bean","amount": 1, "type": "structure"},
     {"text": "The wire cage: All players must place 1 extra bean during each of their play rounds. Cost: 5 hens // 1 hen","amount": 1, "type": "structure"},
+  // Other cards
+    {"text": "Make target player the starting player.", "amount": 5, "type": "other"},
+    {"text": "Swap positions up to 4 target resources.", "amount": 5, "type": "other"}
                 ];
 let gameDeck = [];
 let drafting = false;
@@ -212,6 +205,15 @@ for (let i = 0; i < numPlayers; i++) {
     resourceObject[RESOURCES[j]] = 0;
   }
   RESOURCE_STATE.push(resourceObject);
+}
+
+let OBJECTIVE_STATE = [];
+resetObjectives();
+function resetObjectives() {
+  OBJECTIVE_STATE = [];
+  for (let i = 0; i < numPlayers; i++) {
+    OBJECTIVE_STATE.push([]);
+  }
 }
 
 // --------------------------------------
@@ -270,6 +272,10 @@ io.on('connection', function (socket) {
     pushCard(client_object);
   });
 
+  socket.on("drop_card_action", function(client_object) {
+    dropCard(client_object, socket);
+  });
+
   socket.on("remove_structure", function(client_object) {
     removeStructure(client_object);
   });
@@ -280,6 +286,10 @@ io.on('connection', function (socket) {
 
   socket.on("resource_update", function(client_object) {
     resourceUpdate(socket, client_object);
+  });
+
+  socket.on("remove_objective", function(client_object) {
+    removeObjective(client_object, socket);
   });
 
   socket.on('disconnect', () => {
@@ -334,9 +344,9 @@ function playerConnect(socket, playerId) {
     if (PLAYERS[i]['id'] == playerId) {
       PLAYERS[i]['socketId'] = socket.id;
       socket.emit('player_info', { 'playerId' : PLAYERS[i]['id'], 'playerNum' : PLAYERS[i]['player'] });
-      socket.emit('starting_info', {"gameState": GAME_STATE, "handState": HAND_STATE[i], "resourceState": RESOURCE_STATE[i]});
+      socket.emit('starting_info', {"gameState": GAME_STATE, "handState": HAND_STATE[i], "resourceState": RESOURCE_STATE[i], "objectiveState": OBJECTIVE_STATE[i]});
       socket.emit('draft_info', drafting);
-      socket.emit("character_info", chooseCharacter());
+      socket.emit("character_info", GAME_STATE["characters"][i]);
       return;
     }
   }
@@ -347,7 +357,7 @@ function playerConnect(socket, playerId) {
       PLAYERS[i]['sent'] = true;
       PLAYERS[i]['socketId'] = socket.id;
       socket.emit('player_info', { 'playerId' : PLAYERS[i]['id'], 'playerNum' : PLAYERS[i]['player'] });
-      socket.emit('starting_info', { "gameState": GAME_STATE, "handState": HAND_STATE[i], "resourceState": RESOURCE_STATE[i]});
+      socket.emit('starting_info', { "gameState": GAME_STATE, "handState": HAND_STATE[i], "resourceState": RESOURCE_STATE[i], "objectiveState": OBJECTIVE_STATE[i]});
       socket.emit("character_info", chooseCharacter());
       return;
     }
@@ -567,12 +577,13 @@ function removeStructure(index) {
 }
 
 function removeContact(index) {
-  io.sockets.emit("contact_state_update", GAME_STATE["contacts"]);
   GAME_STATE["contacts"].pop(index);
+  io.sockets.emit("contact_state_update", GAME_STATE["contacts"]);
 }
 
+// --------- End of Contact / Structure functions -------
+
 function resourceUpdate(socket, client_object) {
-console.log(client_object["resource"]);
   let playerIndex = -1;
   for (let i = 0; i < PLAYERS.length; i++) {
     if (PLAYERS[i]["socketId"] == socket.id) {
@@ -583,3 +594,27 @@ console.log(client_object["resource"]);
   RESOURCE_STATE[playerIndex][client_object["resource"]] += client_object["amount"];
   socket.emit("update_resource", RESOURCE_STATE[playerIndex]);
 }
+
+function dropCard(client_object, socket) {
+  let playerIndex = -1;
+  for (let i = 0; i < PLAYERS.length; i++) {
+    if (PLAYERS[i]["socketId"] == socket.id) {
+      playerIndex = i;
+      break;
+    } 
+  } 
+  OBJECTIVE_STATE[playerIndex].push(client_object);
+  socket.emit("update_objectives", OBJECTIVE_STATE[playerIndex]);
+}
+function removeObjective(client_object, socket) {
+  let playerIndex = -1;
+  for (let i = 0; i < PLAYERS.length; i++) {
+    if (PLAYERS[i]["socketId"] == socket.id) {
+      playerIndex = i;
+      break;
+    }
+  }
+  OBJECTIVE_STATE[playerIndex].pop(client_object);
+  socket.emit("update_objectives", OBJECTIVE_STATE[playerIndex]);
+}
+

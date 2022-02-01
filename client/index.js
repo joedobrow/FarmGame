@@ -10,6 +10,7 @@ const boardCardsHigh = 5;
 const handSize = 9;
 const maxStructures = 5; // It's actually 3, but there are cards that increase it
 const maxContacts = 5; // It's actually 3, but there are cards that increase it
+const maxObjectives = 5;
 // Names are used by app.js, but colors are only for client.
 let corners = [{ "name": "empty", "color": "black" },
                { "name": "chickencoop", "color": "goldenrod" },
@@ -146,6 +147,10 @@ window.onload = () => {
     createResourceArea(response);
   });
 
+  socket.on("update_objectives", response => {
+    createObjectiveArea(response);
+  });
+
   socket.on('message', message => {
     console.log(message);
   });
@@ -193,6 +198,7 @@ function buildGame(response) {
     createContactArea(response["gameState"]["contacts"]); 
     createHand(response["handState"]);
     createResourceArea(response["resourceState"]);
+    createObjectiveArea(response["objectiveState"]);
     document.getElementById("draftButton").style.display = "block";
     document.getElementById('characterSection').style.display = "block";
     loadBoard(response["gameState"]["board"]);
@@ -469,7 +475,7 @@ function createContactArea(contacts) {
 function updateStructures(structures) {
   for (let i = 0; i < structures.length; i++) {
     let structureCard = document.getElementById("structureCard" + i);
-    structureCard.innerText = structures[i];
+    structureCard.innerText = structures[i].split("//")[0];
     let closeButton = createElement("closeButton", "structureCloseButton" + i, 30, 30);
     let closeIcon = document.createElement("img");
     closeIcon.setAttribute("src", "./content/icons/x.svg");
@@ -484,7 +490,7 @@ function updateStructures(structures) {
 function updateContacts(contacts) {
   for (let i = 0; i < contacts.length; i++) {
     let contactCard = document.getElementById("contactCard" + i);
-    contactCard.innerText = contacts[i];
+    contactCard.innerText = contacts[i].split("//")[0];
     let closeButton = createElement("closeButton", "contactCloseButton" + i, 30, 30);
     let closeIcon = document.createElement("img");
     closeIcon.setAttribute("src", "./content/icons/x.svg");
@@ -518,6 +524,15 @@ function createHand(handState) {
         upArrow.setAttribute("onclick", "pushCard('" + handState[i]["type"] + "', '" + handState[i]["text"] +"');");
         pushButton.appendChild(upArrow); 
         cardElement.appendChild(pushButton);
+      } else if (handState[i]["type"] == "objective") {
+        let dropButton = createElement("dropButton", "dropButtonhandCard" + i, 30, 30);
+        let downArrow = document.createElement("img");
+        downArrow.setAttribute("src", "./content/icons/downarrow.svg");
+        downArrow.setAttribute("alt", "arrow");
+        downArrow.setAttribute("class", "downarrow");
+        downArrow.setAttribute("onclick", "dropCard('" + handState[i]["text"] + "');");
+        dropButton.appendChild(downArrow);
+        cardElement.appendChild(dropButton);
       }
     }
   }
@@ -525,17 +540,27 @@ function createHand(handState) {
 function pushCard(type, body) {
   socket.emit("push_card_action", { "type": type, "body": body });
 }
+function dropCard(body) {
+  socket.emit("drop_card_action", body);
+}
 function toggleHand(handElement) {
   let pushButton = document.getElementById("pushButton" + handElement.getAttribute("id"));
+  let dropButton = document.getElementById("dropButton" + handElement.getAttribute("id"));
   if (handElement.style.color == "grey") {
     handElement.style.color = "black";
     if (pushButton != null) {
       pushButton.style.display = "block";
     }
+    if (dropButton != null) {
+      dropButton.style.display = "block";
+    }
   } else {
     handElement.style.color = "grey";
     if (pushButton != null) {
       pushButton.style.display = "none";
+    }
+    if (dropButton != null) {
+      dropButton.style.display = "none";
     }
   }
 }
@@ -570,7 +595,6 @@ function buildDraftArea() {
 }
 
 function loadPack(packState) {
-  console.log(packState);
   for (let i = 0; i < packState.length; i++) {
       console.log(packState[i]);
       let cardTitle = document.getElementById("draftCardTitle" + i);
@@ -600,6 +624,8 @@ function clearDraft() {
     draftCardTitle.innerText = "";
     let draftCardBody = document.getElementById("draftCardBody" + i);
     draftCardBody.innerText = "";
+    let draftCard = document.getElementById("draftCard" + i);
+    draftCard.setAttribute("onclick", "");
   }
 }
 function draftNotFull(response) {
@@ -610,30 +636,18 @@ function draftNotFull(response) {
 // ------------ End of Draft Area Functions ------------------------
 
 // Character Functions
-function setCharacter(characterInfo) {
-  let card = document.getElementById('characterCard');
+function setCharacter(character) {
+  let card = document.getElementById("characterCard");
   removeAllChildren(card)
-  let title = document.createElement('h3');
-  title.setAttribute('class', 'characterCardTitle');
-  let listHolder = document.createElement('div');
-  listHolder.setAttribute('class', 'listHolder');
-
-  title.innerText = characterInfo[0];
+  let title = document.createElement("h3");
+  title.setAttribute("class", "characterCardTitle");
+  title.innerText = character.charAt(0).toUpperCase() + character.slice(1);
   card.appendChild(title);
-  card.appendChild(listHolder);
-  let newList = document.createElement('ul');
-  newList.setAttribute('id', 'conditionList');
-  for (condition in characterInfo[1]) {
-    let cond = document.createElement('li');
-    midString = ' points per ';
-    if (characterInfo[1][condition] == 1 || characterInfo[1][condition] == -1) {
-      midString = ' point per ';
-    }
-    cond.innerText = characterInfo[1][condition] + ' points per ' + condition.replaceAll('_', ' ');
-    newList.appendChild(cond);
-  }
-  listHolder.appendChild(newList);
-  card.appendChild(listHolder);
+  let characterImg = document.createElement("img");
+  characterImg.setAttribute("class", "characterImg");
+  characterImg.setAttribute("src", "./content/characters/" + character + ".png");
+  characterImg.setAttribute("alt", character);
+  card.appendChild(characterImg);
 }
 
 // Shop functions
@@ -701,6 +715,44 @@ function createResourceArea(resources) {
   }
 }
 
+function createObjectiveArea(objectives) {
+  let objectiveArea = document.getElementById("objectiveSection");
+  objectiveArea.style.display = "flex";
+  removeAllChildren(objectiveArea);
+  let upperDiv = document.createElement("div");
+  let objectiveTitle = document.createElement("h3");
+  objectiveTitle.innerText = "Objectives";
+  objectiveTitle.setAttribute("class", "characterCardTitle");
+  upperDiv.appendChild(objectiveTitle);
+  objectiveArea.appendChild(upperDiv);
+  let lowerDiv = document.createElement("div");
+  lowerDiv.setAttribute("class", "objectiveHolder");
+  for (let i = 0; i < maxObjectives; i++) {
+    let objectiveCard = createElement("objectiveCard", "objectiveCard" + i, cellSize, cellSize);
+    lowerDiv.appendChild(objectiveCard);
+  }
+  objectiveArea.appendChild(lowerDiv);
+  if (objectives != null && objectives.length > 0) {
+    for (let i = 0; i < objectives.length; i++) {
+      let objectiveCard = document.getElementById("objectiveCard" + i);
+      objectiveCard.innerText = objectives[i].split("//")[0];
+      let closeButton = createElement("closeButton", "closeButton" + i, 30, 30);
+      let closeImg = document.createElement("img");
+      closeImg.setAttribute("src", "./content/icons/x.svg");
+      closeImg.setAttribute("alt", "close");
+      closeImg.setAttribute("class", "closeIcon");
+      closeImg.setAttribute("onclick", "removeObjective(" + i + ");");
+      closeButton.appendChild(closeImg);
+      objectiveCard.appendChild(closeButton);
+    }
+  }
+}
+
+function removeObjective(index) {
+  if (confirm("Are you sure you want to remove this objective?")) {
+    socket.emit("remove_objective", index);
+  }
+}
 function sendResourceIncrement(resource, amount) {
   socket.emit("resource_update", {"resource" : resource, "amount":  amount})
 }
