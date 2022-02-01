@@ -30,6 +30,16 @@ let cells =   [{ "name": "empty", "color": "grey" },
 let edges =   [{ "name": "empty", "color": "black" },
                { "name": "fence", "color": "saddlebrown" },
                { "name": "canal", "color": "aqua" }];
+
+let RESOURCES = [{ "name": "empty", "color": "grey" }, 
+               { "name": "sheep", "color": "white" },
+               { "name": "hen", "color": "goldenrod" },
+               { "name": "bean", "color": "burlywood" },
+               { "name": "corn", "color": "gold" },
+               { "name": "fence", "color": "saddlebrown" },
+               { "name": "canal", "color": "aqua" }];
+
+
                
 let cards = ["none", "sheep", "hen", "squash", "bean", "corn", "hammer", "wrench", "saw", "shovel", "rooster"]
 
@@ -53,7 +63,7 @@ let playerId = -1;
 // -------------------------------
 
 // These are not needed by backend
-const cellSize = 100;
+const cellSize = 90;
 const spaceSize = 20;
 const counterSize = 20;
 const borderSize = 3;
@@ -65,8 +75,8 @@ const boardHeight = (boardCardsHigh * (cellSize + spaceSize)) + spaceSize;
 // Node Listeners
 window.onload = () => {
 
-  socket.on('starting_info', gameState => {
-    buildGame(gameState);
+  socket.on('starting_info', response => {
+    buildGame(response);
   });
 
   socket.on('game_state_update', gameState => {
@@ -81,11 +91,11 @@ window.onload = () => {
     restart();  
   });
 
-  socket.on('game-full', isFull => {
+  socket.on('game_full', isFull => {
     setGameFull(isFull);
   });
 
-  socket.on('player-info', playerInfo => {
+  socket.on('player_info', playerInfo => {
     setPlayerId(playerInfo['playerId']);
     setPlayerNum(playerInfo['playerNum']);
     setRoundNum(1);
@@ -108,7 +118,7 @@ window.onload = () => {
   });
 
   socket.on("card_to_hand", handState => {
-    displayHand(handState);
+    createHand(handState);
   });
 
   socket.on("character_info", characterInfo => {
@@ -125,11 +135,15 @@ window.onload = () => {
   });
 
   socket.on("structure_state_update", response => {
-    updateStructures(response);
+    createStructureArea(response);
   });
 
   socket.on("contact_state_update", response => {
-    updateContacts(response);
+    createContactArea(response);
+  });
+
+  socket.on("update_resource", response => {
+    createResourceArea(response);
   });
 
   socket.on('message', message => {
@@ -172,18 +186,16 @@ function startGame() {
   socket.emit('get_starting_info', getPlayerIdCookie());
 }
 
-function buildGame(gameState) {
+function buildGame(response) {
   if (playerId == -1) {
     startBoard();
-    removeAllChildren(document.getElementById("structureArea"));
-    createStructureArea();
-    removeAllChildren(document.getElementById("contactArea"));
-    createContactArea();
-    removeAllChildren(document.getElementById("hand"));
-    createHand();
+    createStructureArea(response["gameState"]["structures"]);
+    createContactArea(response["gameState"]["contacts"]); 
+    createHand(response["handState"]);
+    createResourceArea(response["resourceState"]);
     document.getElementById("draftButton").style.display = "block";
     document.getElementById('characterSection').style.display = "block";
-    loadBoard(gameState['board']);
+    loadBoard(response["gameState"]["board"]);
   } else if (gameFull) {
     showGameFull();
   }
@@ -284,7 +296,6 @@ function startBoard() {
     document.getElementById("loadButton").style.display = "none";
     document.getElementById("resetButton").style.display = "block";
     document.getElementById("homeIcon").style.display = "none";
-    document.getElementById("resourceBar").style.display = "block";
     removeAllChildren(document.getElementById("board"));
     createBoardRows();
 }
@@ -419,66 +430,95 @@ function sendTileChange(cellElement) {
 // Structure/Contact Area Functions
 
 // Initialize
-function createStructureArea() {
+function createStructureArea(structures) {
   let structureArea = document.getElementById("structureArea");
-  structureArea.removeAllChildren();
+  removeAllChildren(structureArea);
   let title = document.createElement("h3");
   title.setAttribute("class", "sidebarTitle");
   title.innerText = "Structures";
   structureArea.appendChild(title);
   for (let i = 0; i < maxStructures; i++) {
-    let newStructure = createElement("structureCard", "structureCard" + i, (cellSize + borderSize), (cellSize + borderSize));
+    let newStructure = createElement("sidebarCard", "structureCard" + i, (cellSize + borderSize), (cellSize + borderSize));
     structureArea.appendChild(newStructure);
   }
+  updateStructures(structures);
 }
-function createContactArea() {
+function removeStructure(index) {
+  if (confirm("Are you sure you want to remove this structure?")) {
+    socket.emit("remove_structure", index);
+  }
+}
+function removeContact(index) {
+  if (confirm("Are you sure you want to remove this contact?")) {
+    socket.emit("remove_contact", index);
+  }
+} 
+function createContactArea(contacts) {
   let contactArea = document.getElementById("contactArea");
-  contactArea.removeAllChildren();
+  removeAllChildren(contactArea);
   let title = document.createElement("h3");
-  title.setAttribute("class", "contactTitle");
+  title.setAttribute("class", "sidebarTitle");
   title.innerText = "Contacts";
   contactArea.appendChild(title);
   for (let i = 0; i < maxContacts; i++) {
-    let newContact = createElement("contactCard", "contactCard" + i, (cellSize + borderSize), (cellSize + borderSize));
+    let newContact = createElement("sidebarCard", "contactCard" + i, (cellSize + borderSize), (cellSize + borderSize));
     contactArea.appendChild(newContact);
   }
+  updateContacts(contacts);
 }
 function updateStructures(structures) {
-  createStructureArea(); 
   for (let i = 0; i < structures.length; i++) {
     let structureCard = document.getElementById("structureCard" + i);
     structureCard.innerText = structures[i];
+    let closeButton = createElement("closeButton", "structureCloseButton" + i, 30, 30);
+    let closeIcon = document.createElement("img");
+    closeIcon.setAttribute("src", "./content/icons/x.svg");
+    closeIcon.setAttribute("alt", "close");
+    closeIcon.setAttribute("class", "closeIcon");
+    closeIcon.setAttribute("onclick", "removeStructure(" + i + ");");
+    closeButton.appendChild(closeIcon);
+    structureCard.appendChild(closeButton); 
+
   }
 }
 function updateContacts(contacts) {
-  createContactArea();
   for (let i = 0; i < contacts.length; i++) {
     let contactCard = document.getElementById("contactCard" + i);
     contactCard.innerText = contacts[i];
+    let closeButton = createElement("closeButton", "contactCloseButton" + i, 30, 30);
+    let closeIcon = document.createElement("img");
+    closeIcon.setAttribute("src", "./content/icons/x.svg");
+    closeIcon.setAttribute("alt", "close");
+    closeIcon.setAttribute("class", "closeIcon");
+    closeIcon.setAttribute("onclick", "removeContact(" + i + ");");
+    closeButton.appendChild(closeIcon);
+    contactCard.appendChild(closeButton); 
+ }
 }
 // ------ End of Structure/Contact Area functions -------
 
 // Hand Functions
-function createHand() {
+function createHand(handState) {
+  removeAllChildren(document.getElementById("hand"));
   for (let i = 0; i < handSize; i++) {
     let newCard = createElement("handCard", "handCard" + i, (cellSize + borderSize), (cellSize + borderSize));
     newCard.setAttribute("onclick", "toggleHand(this)");
     document.getElementById("hand").appendChild(newCard);
   }
-}
-function displayHand(handState) {
-  for (let i = 0; i < handState.length; i++) {
-    let cardElement = document.getElementById("handCard" + i);
-    cardElement.innerText = handState[i]["text"];
-    if (handState[i]["type"] == "structure" || handState[i]["type"] == "contact") {
-      let pushButton = createElement("pushButton", "pushButton" + i, 30, 30);
-      let upArrow = document.createElement("img");
-      upArrow.setAttribute("src", "./content/icons/uparrow.svg");
-      upArrow.setAttribute("alt", "arrow");
-      upArrow.setAttribute("class", "upArrow");
-      upArrow.setAttribute("onclick", "pushCard(" + handState[i]["type"] + ", " + handState[i]["text"] +");");
-      pushButton.appendChild(upArrow); 
-      cardElement.appendChild(pushButton);
+  if (handState != null) {
+    for (let i = 0; i < handState.length; i++) {
+      let cardElement = document.getElementById("handCard" + i);
+      cardElement.innerText = handState[i]["text"];
+      if (handState[i]["type"] == "structure" || handState[i]["type"] == "contact") {
+        let pushButton = createElement("pushButton", "pushButtonhandCard" + i, 30, 30);
+        let upArrow = document.createElement("img");
+        upArrow.setAttribute("src", "./content/icons/uparrow.svg");
+        upArrow.setAttribute("alt", "arrow");
+        upArrow.setAttribute("class", "upArrow");
+        upArrow.setAttribute("onclick", "pushCard('" + handState[i]["type"] + "', '" + handState[i]["text"] +"');");
+        pushButton.appendChild(upArrow); 
+        cardElement.appendChild(pushButton);
+      }
     }
   }
 }
@@ -486,10 +526,17 @@ function pushCard(type, body) {
   socket.emit("push_card_action", { "type": type, "body": body });
 }
 function toggleHand(handElement) {
+  let pushButton = document.getElementById("pushButton" + handElement.getAttribute("id"));
   if (handElement.style.color == "grey") {
     handElement.style.color = "black";
+    if (pushButton != null) {
+      pushButton.style.display = "block";
+    }
   } else {
     handElement.style.color = "grey";
+    if (pushButton != null) {
+      pushButton.style.display = "none";
+    }
   }
 }
 function resetHand() {
@@ -614,6 +661,52 @@ function buildShop() {
   }
 }
 // --------- End of Shop ------------
+
+// Resource Area
+
+function createResourceArea(resources) {
+  let resourceArea = document.getElementById("resourceBar");
+  removeAllChildren(resourceArea);
+  for (resource in resources) {
+    let newResource = createElement("resourceCard", "resourceCard" + resource, cellSize, cellSize);
+    
+    let icon = document.createElement("img");
+    icon.setAttribute("src", "./content/icons/" + resource + ".svg");
+    icon.setAttribute("alt", resource);
+    icon.style.width = cellSize;
+    icon.style.height = cellSize;
+    newResource.appendChild(icon);
+    for (let i = 0; i < RESOURCES.length; i++) {
+      if (RESOURCES[i]["name"] == resource) { 
+        newResource.style.backgroundColor = RESOURCES[i]["color"];
+      }
+    }
+    let counter = createElement("counter", "resourceCounter" + resource, counterSize * 2, counterSize);
+       
+    let counterNum = document.createElement("div");
+    counterNum.innerText = resources[resource];
+    counterNum.setAttribute("class", "counterNum");
+ 
+    let upClick = createElement("upClicker", "upClicker" + resource, counterSize, counterSize);
+    upClick.setAttribute("onClick", "sendResourceIncrement('" + resource + "', 1);");
+ 
+    let downClick = createElement("downClicker", "downClicker" + resource, counterSize, counterSize);
+    downClick.setAttribute("onClick", "sendResourceIncrement('" + resource + "', -1);");
+ 
+    counter.appendChild(counterNum);
+    counter.appendChild(upClick);
+    counter.appendChild(downClick);
+    newResource.appendChild(counter);
+    resourceArea.appendChild(newResource);
+  }
+}
+
+function sendResourceIncrement(resource, amount) {
+  socket.emit("resource_update", {"resource" : resource, "amount":  amount})
+}
+
+// ---------- End of Resource Area ------
+
 
 // Modal
 function showShop() {

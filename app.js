@@ -38,8 +38,7 @@ let PLAYERS = [];
 const GAME_STATE = { "board": board, 
                      "contacts": [],
                      "structures": [],
-                     "resources": [], 
-                     "hands": [] };
+                     "resources": [], };
 
 let CHARACTERS = { 'River': { 'canal': 2, 'well': 5, 'bean_not_touching_water': -3, 'animal': -1, 'outhouse': 2 },
                      'Wilder': { 'animal': 3, 'cornertile': -1, 'edgetile': -1, 'outhouse': 8, 'emptycell': 4 },
@@ -205,6 +204,16 @@ function resetHands() {
     HAND_STATE.push([]);
   }
 }
+const RESOURCES = ["sheep", "hen", "bean", "corn", "fence", "canal"];
+let RESOURCE_STATE = [];
+for (let i = 0; i < numPlayers; i++) {
+  let resourceObject = {};
+  for (let j = 0; j < RESOURCES.length; j++) {
+    resourceObject[RESOURCES[j]] = 0;
+  }
+  RESOURCE_STATE.push(resourceObject);
+}
+
 // --------------------------------------
 // Serve client-side files
 app.use(express.static(path.join(__dirname, 'client')));
@@ -261,6 +270,18 @@ io.on('connection', function (socket) {
     pushCard(client_object);
   });
 
+  socket.on("remove_structure", function(client_object) {
+    removeStructure(client_object);
+  });
+
+  socket.on("remove_contact", function(client_object) {
+    removeContact(client_object);
+  });
+
+  socket.on("resource_update", function(client_object) {
+    resourceUpdate(socket, client_object);
+  });
+
   socket.on('disconnect', () => {
     console.log('user ' + socket.id + ' disconnected');
   });
@@ -312,8 +333,8 @@ function playerConnect(socket, playerId) {
   for (let i = 0; i < PLAYERS.length; i++) {
     if (PLAYERS[i]['id'] == playerId) {
       PLAYERS[i]['socketId'] = socket.id;
-      socket.emit('player-info', { 'playerId' : PLAYERS[i]['id'], 'playerNum' : PLAYERS[i]['player'] });
-      socket.emit('starting_info', GAME_STATE);
+      socket.emit('player_info', { 'playerId' : PLAYERS[i]['id'], 'playerNum' : PLAYERS[i]['player'] });
+      socket.emit('starting_info', {"gameState": GAME_STATE, "handState": HAND_STATE[i], "resourceState": RESOURCE_STATE[i]});
       socket.emit('draft_info', drafting);
       socket.emit("character_info", chooseCharacter());
       return;
@@ -325,15 +346,15 @@ function playerConnect(socket, playerId) {
     if (PLAYERS[i]['sent'] == false) {
       PLAYERS[i]['sent'] = true;
       PLAYERS[i]['socketId'] = socket.id;
-      socket.emit('player-info', { 'playerId' : PLAYERS[i]['id'], 'playerNum' : PLAYERS[i]['player'] });
-      socket.emit('starting_info', GAME_STATE);
+      socket.emit('player_info', { 'playerId' : PLAYERS[i]['id'], 'playerNum' : PLAYERS[i]['player'] });
+      socket.emit('starting_info', { "gameState": GAME_STATE, "handState": HAND_STATE[i], "resourceState": RESOURCE_STATE[i]});
       socket.emit("character_info", chooseCharacter());
       return;
     }
   }
  
-  // Otherwise...send 'game-full'
-  socket.emit('game-full', true);
+  // Otherwise...send 'game_full'
+  socket.emit("game_full", true);
   return;
 }
 
@@ -402,7 +423,6 @@ function startDraft(socket) {
   } else {
     buildDeck();
     buildPacks();
-    logPackState();
     startPack(socket);
    }
 }
@@ -418,12 +438,6 @@ function joinDraft(socket) {
   let playerIndex = getPlayerFromSocket(socket)['player'];
   socket.emit("card_to_hand", HAND_STATE[playerIndex]);
 }
-function logPackState() {
-  for (pack in PACK_STATE) {
-    console.log(pack + ": " + PACK_STATE[pack]);
-  }
-}
-
 function sendPack(socket) {
   let player = getPlayerFromSocket(socket);   
   if (player["waitingForPick"] == false) {
@@ -436,7 +450,6 @@ function sendAllPacks() {
   }
 }
 function draftChoice(socket, cardIndex) {
-  logPackState();
   let draftSeat = -1; // Which player sent us this?
   for (let i = 0; i < PLAYERS.length; i++) {
     if (PLAYERS[i]["socketId"] == socket.id) {
@@ -468,6 +481,16 @@ function draftChoice(socket, cardIndex) {
       console.log("WHOOPS, trying to remove card not in pack!!!");
     }
   }
+}
+function updateResource(socket, resourceName, amount) {
+  let playerIndex = -1;
+  for (let i = 0; i < PLAYERS.length; i++) {
+    if (PLAYERS[i]["socketId"] = socket.id) {
+      playerIndex = i;
+    }
+  }
+  RESOURCE_STATE[i][resourceName] += amount;
+  socket.emit("update_resource", RESOURCE_STATE[i]);
 }
 function resetWaitingForPicks() {
   for (player in PLAYERS) {
@@ -533,9 +556,30 @@ function pushCard(client_object) {
     GAME_STATE["structures"].push(client_object["body"]);
     io.sockets.emit("structure_state_update", GAME_STATE["structures"]);
   } else if (client_object["type"] == "contact" && GAME_STATE["contacts"].length < MAX_CONTACTS) {
-    GAME_STATE["contact"].push(client_object["body"]);
+    GAME_STATE["contacts"].push(client_object["body"]);
     io.sockets.emit("contact_state_update", GAME_STATE["contacts"]);
   }
 }
 
-// Character Related Functions
+function removeStructure(index) {
+  GAME_STATE["structures"].pop(index);
+  io.sockets.emit("structure_state_update", GAME_STATE["structures"]);
+}
+
+function removeContact(index) {
+  io.sockets.emit("contact_state_update", GAME_STATE["contacts"]);
+  GAME_STATE["contacts"].pop(index);
+}
+
+function resourceUpdate(socket, client_object) {
+console.log(client_object["resource"]);
+  let playerIndex = -1;
+  for (let i = 0; i < PLAYERS.length; i++) {
+    if (PLAYERS[i]["socketId"] == socket.id) {
+      playerIndex = i;
+      break;
+    }
+  }
+  RESOURCE_STATE[playerIndex][client_object["resource"]] += client_object["amount"];
+  socket.emit("update_resource", RESOURCE_STATE[playerIndex]);
+}
